@@ -720,4 +720,8 @@ textarea {
   .detail__status {
     align-items: flex-start;
   }
+
+  .cta {
+    padding: 8px 14px;
+  }
 }

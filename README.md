@@ -1,15 +1,15 @@
 # DocuHealth AI Dashboard
 
-DocuHealth AI is a React + Vite single page application paired with a lightweight
-Express API. It visualises document digitisation KPIs for government medical
-institutions and exposes sample endpoints for interactive demos.
+DocuHealth AI is a React + Vite single page application for OCR functionality for medical patients, paired with a lightweight Express API. It visualises document digitisation KPIs for government medical institutions and exposes sample endpoints for interactive demos.
 
 ## Prerequisites
 
 * Node.js 18+
 * npm 9+
 
-## Local development
+## Getting started
+
+### Local development
 
 Install dependencies (front-end + API share a single `package.json`):
 
@@ -28,8 +28,9 @@ By default this starts:
 * Vite on http://localhost:5173
 * Express API on http://localhost:4000
 
-The React app proxies requests directly to `http://localhost:4000/api` (you can
-customise the base URL with `VITE_API_BASE`).
+The React app proxies requests directly to `http://localhost:4000/api` (you can customise the base URL with `VITE_API_BASE`).
+
+The dev server prints a local URL (usually `http://localhost:5173`) that you can open in your browser.
 
 To run either service independently:
 
@@ -40,7 +41,7 @@ npm run dev:server   # Express API only
 
 Stop any running dev servers with `Ctrl+C`.
 
-## Building for production
+### Building for production
 
 Create an optimised production build with:
 
@@ -48,7 +49,7 @@ Create an optimised production build with:
 npm run build
 ```
 
-Preview the built site locally:
+The compiled assets are emitted into the `dist/` directory. You can preview the production build locally with:
 
 ```bash
 npm run preview
@@ -56,8 +57,7 @@ npm run preview
 
 ## API reference
 
-The demo API responds with static, mock data suitable for front-end integration
-and UI testing.
+The demo API responds with static, mock data suitable for front-end integration and UI testing.
 
 | Method | Path                                   | Description                         |
 | ------ | -------------------------------------- | ----------------------------------- |
