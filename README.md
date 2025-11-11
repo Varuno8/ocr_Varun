@@ -1,6 +1,6 @@
 # DocuHealth AI Dashboard
 
-DocuHealth AI is a React + Vite single page application for OCR functionality for medical patients, paired with an Express API that brokers requests to Google Cloud Document AI. It visualises document digitisation KPIs for government medical institutions and exposes production-ready endpoints for processing documents through Document AI.
+DocuHealth AI is a React + Vite single page application for digitising medical paperwork, paired with an Express API backed by PostgreSQL. It visualises document throughput, validation queues, medicine stock alerts, and compliance activity for government medical institutions while exposing endpoints for uploading scans and querying operational telemetry.
 
 ## Prerequisites
 
@@ -12,9 +12,6 @@ DocuHealth AI is a React + Vite single page application for OCR functionality fo
 ### Local development
 
 Install dependencies (front-end + API share a single `package.json`).
-
-> **Note**
-> Installing the Google Cloud SDK packages requires access to the public npm registry. If installation is blocked by a 403 or connectivity error, retry on a network that allows access to `@google-cloud/*` packages.
 
 ```bash
 npm install
@@ -64,26 +61,26 @@ Populate the following environment variables before starting the API. They can b
 
 | Variable | Required | Description |
 | --- | --- | --- |
-| `GOOGLE_APPLICATION_CREDENTIALS` | Yes | Absolute path to a Google Cloud service account key with Document AI and Storage access. |
-| `DOC_AI_PROJECT_ID` | Yes | Google Cloud project ID where Document AI is enabled. |
-| `DOC_AI_LOCATION` | Yes | Document AI location/region (for example `us` or `us-document-ai`). |
-| `DOC_AI_PROCESSOR_ID` | Yes | Processor identifier to run by default. |
-| `DOC_AI_GCS_BUCKET` | Recommended | Cloud Storage bucket for staging large documents and writing batch results. Required for files over the synchronous limit. |
-| `DOC_AI_GCS_OUTPUT_PREFIX` | No | Folder/prefix inside the bucket for batch outputs (defaults to `document-ai-output`). |
-| `DOC_AI_GCS_UPLOAD_PREFIX` | No | Folder/prefix for uploaded files (defaults to `document-ai-uploads`). |
-| `DOC_AI_SYNC_UPLOAD_LIMIT_BYTES` | No | Override the synchronous processing size threshold (default 10 MB). |
+| `DATABASE_URL` | No | PostgreSQL connection string. When omitted the API falls back to an in-memory database seeded with demo data. |
+| `PGSSLMODE` | No | Set to `require` when connecting to a managed Postgres instance that needs TLS. |
+| `PORT` | No | HTTP port for the Express API (defaults to `4000`). |
+| `UPLOAD_MAX_MB` | No | Override the maximum upload size in megabytes for OCR scans (defaults to `25`). |
+
+### PostgreSQL initialisation
+
+When a real PostgreSQL connection string is provided the server automatically creates the required tables on startup. Seed data is inserted only when the `modules` table is empty, making it safe to point the API at an existing database. The schema covers modules, documents, validations, audit logs, and pharmacy stock levels.
 
 ## API reference
 
-The backend exposes scalable endpoints that proxy Google Cloud Document AI:
+The backend exposes REST endpoints tailored to the medical OCR workflow:
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
-| GET | `/health` | Health probe for uptime checks. |
-| GET | `/api/config/doc-ai` | Returns sanitized Document AI configuration metadata. |
-| GET | `/api/processors` | Lists processors available in the configured project/location. |
-| GET | `/api/processors/:processorId/versions` | Lists processor versions for the supplied processor ID. |
-| GET | `/api/operations?name=<operationName>` | Retrieves the status of a long-running batch process. |
-| POST | `/api/process` | Processes an uploaded file (`multipart/form-data` field `file`) or an existing `gcsUri`. Automatically escalates to asynchronous batch processing when the document exceeds the synchronous size limit. Include `sync=true` to force a synchronous attempt when providing a `gcsUri` (fails fast if the document is too large). |
+| GET | `/health` | Health probe with database status. |
+| GET | `/api/dashboard` | Aggregated KPIs including daily scans, pending validations, medicine stock, and recent documents. |
+| GET | `/api/modules` | Summary list of OCR modules with status, accuracy, and supported document types. |
+| GET | `/api/modules/:slug` | Detailed telemetry, metrics, and contacts for a specific module. |
+| GET | `/api/audit-logs` | Recent audit events covering HIS syncs, overrides, and compliance exports. |
+| POST | `/api/documents` | Upload a new scan (`multipart/form-data` with `file`) and queue it for OCR/validation. |
 
-JSON responses include normalised Document AI data for downstream consumption.
+All responses are JSON. Uploads exceeding the configured confidence threshold create pending validation tickets automatically, keeping the validation queue and dashboard metrics in sync.
