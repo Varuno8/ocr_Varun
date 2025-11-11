@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google-cloud/documentai": "^5.7.0",
+    "@google-cloud/documentai": "^9.3.0",
     "@google-cloud/storage": "^7.12.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
