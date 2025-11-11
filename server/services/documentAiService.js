@@ -5,7 +5,7 @@ import { downloadFileToBuffer } from './storageService.js';
 
 let client;
 
-const getClient = () => {
+export const getClient = () => {
   if (!client) {
     client = new DocumentProcessorServiceClient();
   }

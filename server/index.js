@@ -184,3 +184,98 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+import { getClient } from './services/documentAiService.js';
+
+// Dashboard - system health + Document AI stats
+app.get('/api/dashboard', async (_req, res, next) => {
+  try {
+    const client = getClient();
+
+    // List processors (actual API call)
+    const [processors] = await client.listProcessors({
+      parent: `projects/${config.docAi.projectId}/locations/${config.docAi.location}`,
+    });
+
+    const processorCount = processors.length;
+    const activeProcessors = processors.filter(p => p.state === 'ENABLED').length;
+
+    res.json({
+      status: 'Operational',
+      lastUpdated: new Date().toISOString(),
+      stats: [
+        { id: 'processors', label: 'Total processors', value: processorCount },
+        { id: 'active', label: 'Active', value: activeProcessors },
+      ],
+      operations: processors.map(p => p.displayName),
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Features list - all processors from Document AI
+app.get('/api/features', async (_req, res, next) => {
+  try {
+    const client = getClient();
+    const [processors] = await client.listProcessors({
+      parent: `projects/${config.docAi.projectId}/locations/${config.docAi.location}`,
+    });
+
+    const features = processors.map((p) => ({
+      id: p.name.split('/').pop(),
+      name: p.displayName,
+      summary: p.type,
+      status: p.state === 'ENABLED' ? 'Operational' : 'Disabled',
+      icon: '📄',
+      lastRun: new Date(p.createTime.seconds * 1000).toLocaleString(),
+    }));
+
+    res.json({ features });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Single feature details
+app.get('/api/features/:id', async (req, res, next) => {
+  try {
+    const client = getClient();
+    const processorId = req.params.id;
+
+    const [versions] = await client.listProcessorVersions({
+      parent: `projects/${config.docAi.projectId}/locations/${config.docAi.location}/processors/${processorId}`,
+    });
+
+    res.json({
+      id: processorId,
+      name: `Processor ${processorId}`,
+      description: 'Google Document AI Processor',
+      status: 'Operational',
+      metrics: [
+        { label: 'Versions', value: versions.length },
+        { label: 'Last Updated', value: new Date().toLocaleString() },
+      ],
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Launch a processor action (e.g., process sample doc)
+app.post('/api/features/:id/actions/launch', async (req, res, next) => {
+  try {
+    const processorId = req.params.id;
+    const client = getClient();
+
+    // Perform a dry-run to ensure connectivity
+    await client.getProcessor({
+      name: `projects/${config.docAi.projectId}/locations/${config.docAi.location}/processors/${processorId}`,
+    });
+
+    res.json({ message: `Processor ${processorId} validated and ready to process documents.` });
+  } catch (err) {
+    next(err);
+  }
+});
+
