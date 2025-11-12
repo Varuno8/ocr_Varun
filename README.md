@@ -84,3 +84,12 @@ The backend exposes REST endpoints tailored to the medical OCR workflow:
 | POST | `/api/documents` | Upload a new scan (`multipart/form-data` with `file`) and queue it for OCR/validation. |
 
 All responses are JSON. Uploads exceeding the configured confidence threshold create pending validation tickets automatically, keeping the validation queue and dashboard metrics in sync.
+
+### Performance instrumentation
+
+Every request is timed and surfaced via standard headers to help diagnose slow endpoints during demos or production pilots:
+
+* `X-Response-Time` exposes the end-to-end processing time in milliseconds.
+* `Server-Timing: app;dur=…` can be read by browsers and observability tooling for waterfall charts.
+
+The Express server also logs a concise line per request with the HTTP method, path, status code, and duration (e.g. `[server] GET /api/dashboard 200 42.1ms`).
