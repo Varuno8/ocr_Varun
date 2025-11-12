@@ -17,6 +17,31 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use((req, res, next) => {
+  const start = process.hrtime.bigint();
+  let headerApplied = false;
+  const originalWriteHead = res.writeHead;
+
+  res.writeHead = function writeHeadPatched(...args) {
+    if (!headerApplied && !res.headersSent) {
+      const elapsedMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+      const rounded = Math.max(elapsedMs, 0).toFixed(1);
+      res.setHeader('X-Response-Time', `${rounded}ms`);
+      res.setHeader('Server-Timing', `app;dur=${rounded}`);
+      headerApplied = true;
+    }
+    return originalWriteHead.apply(this, args);
+  };
+
+  res.once('finish', () => {
+    const elapsedMs = Number(process.hrtime.bigint() - start) / 1_000_000;
+    const rounded = Math.max(elapsedMs, 0).toFixed(1);
+    console.log(`[server] ${req.method} ${req.originalUrl} ${res.statusCode} ${rounded}ms`);
+  });
+
+  next();
+});
+
 const parseNumeric = (value, fallback = null) => {
   if (value === null || value === undefined) return fallback;
   const result = Number(value);
