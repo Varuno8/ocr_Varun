@@ -1,55 +1,68 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:4000/api";
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:4000/api';
 
-const initialRequestState = {
-  featureId: '',
-  requesterName: '',
-  department: '',
-  priority: 'normal',
+const initialUploadState = {
+  moduleSlug: '',
+  documentType: '',
+  title: '',
   notes: '',
+  uploadedBy: '',
 };
 
-const formatRelativeTime = (isoString) => {
-  if (!isoString) return '';
-  const value = new Date(isoString).getTime();
-  if (Number.isNaN(value)) return '';
-  const diffMs = Date.now() - value;
-  const tense = diffMs >= 0 ? 'ago' : 'from now';
-  const absDiff = Math.abs(diffMs);
+const formatRelativeTime = (value) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const diffMs = date.getTime() - Date.now();
+  const tense = diffMs < 0 ? 'ago' : 'from now';
+  const absMs = Math.abs(diffMs);
   const minute = 60 * 1000;
   const hour = 60 * minute;
   const day = 24 * hour;
 
-  if (absDiff < minute) {
-    return 'just now';
+  if (absMs < minute) return 'just now';
+  if (absMs < hour) {
+    const minutes = Math.round(absMs / minute);
+    return `${minutes} min ${tense}`;
   }
-  if (absDiff < hour) {
-    const mins = Math.round(absDiff / minute);
-    return `${mins} min ${tense}`;
-  }
-  if (absDiff < day) {
-    const hours = Math.round(absDiff / hour);
+  if (absMs < day) {
+    const hours = Math.round(absMs / hour);
     return `${hours} hr ${tense}`;
   }
-  const days = Math.round(absDiff / day);
+  const days = Math.round(absMs / day);
   return `${days} day${days === 1 ? '' : 's'} ${tense}`;
 };
 
 const apiFetch = async (path, options = {}) => {
+  const isFormData = options?.body instanceof FormData;
+  const headers = isFormData
+    ? options.headers ?? {}
+    : {
+        'Content-Type': 'application/json',
+        ...(options.headers ?? {}),
+      };
+
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers ?? {}),
-    },
     ...options,
+    headers,
   });
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch (error) {
+      console.error('[client] Failed to parse JSON', { path, text });
+      throw new Error('Unexpected server response. Please try again later.');
+    }
+  }
 
   if (!response.ok) {
-    const message = data?.message ?? `Request failed (${response.status})`;
+    const message = data?.error || data?.message || `Request failed (${response.status})`;
     throw new Error(message);
   }
 
@@ -58,56 +71,21 @@ const apiFetch = async (path, options = {}) => {
 
 function App() {
   const [dashboard, setDashboard] = useState(null);
-  const [features, setFeatures] = useState([]);
-  const [featureDetails, setFeatureDetails] = useState({});
-  const [selectedFeatureId, setSelectedFeatureId] = useState(null);
-  const [loadingFeatureId, setLoadingFeatureId] = useState(null);
-  const [requestOpen, setRequestOpen] = useState(false);
-  const [requestForm, setRequestForm] = useState(initialRequestState);
-  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [modules, setModules] = useState([]);
+  const [moduleDetails, setModuleDetails] = useState({});
+  const [selectedModuleSlug, setSelectedModuleSlug] = useState('');
+  const [loadingModuleSlug, setLoadingModuleSlug] = useState('');
+  const [pendingValidations, setPendingValidations] = useState([]);
+  const [recentDocuments, setRecentDocuments] = useState([]);
+  const [medicineStock, setMedicineStock] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [uploadForm, setUploadForm] = useState(initialUploadState);
+  const [uploadFile, setUploadFile] = useState(null);
+  const [uploadPreview, setUploadPreview] = useState(null);
+  const [uploading, setUploading] = useState(false);
   const [bannerError, setBannerError] = useState('');
   const [toast, setToast] = useState('');
-
-  useEffect(() => {
-    let active = true;
-
-    apiFetch('/dashboard')
-      .then((payload) => {
-        if (active) {
-          setDashboard(payload);
-          setBannerError('');
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setBannerError(error.message);
-        }
-      });
-
-    apiFetch('/features')
-      .then((payload) => {
-        if (active) {
-          setFeatures(payload.features ?? []);
-          setBannerError('');
-        }
-      })
-      .catch((error) => {
-        if (active) {
-          setBannerError(error.message);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!selectedFeatureId && features.length > 0) {
-      handleFeatureSelect(features[0]);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [features]);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -115,85 +93,198 @@ function App() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  const selectedFeature = useMemo(
-    () => (selectedFeatureId ? featureDetails[selectedFeatureId] : null),
-    [featureDetails, selectedFeatureId],
+  const refreshDashboard = async () => {
+    try {
+      const payload = await apiFetch('/dashboard');
+      setDashboard(payload);
+      setPendingValidations(payload?.pendingValidations ?? []);
+      setRecentDocuments(payload?.recentDocuments ?? []);
+      setMedicineStock(payload?.medicineStock ?? []);
+      setBannerError('');
+    } catch (error) {
+      setBannerError(error.message);
+    }
+  };
+
+  const refreshModules = async () => {
+    try {
+      const payload = await apiFetch('/modules');
+      const list = payload?.modules ?? [];
+      setModules(list);
+
+      if (list.length) {
+        setSelectedModuleSlug((prev) => {
+          if (prev && list.some((module) => module.slug === prev)) {
+            return prev;
+          }
+          return list[0].slug;
+        });
+
+        setUploadForm((prev) => {
+          const activeSlug = list.some((module) => module.slug === prev.moduleSlug)
+            ? prev.moduleSlug
+            : list[0].slug;
+          const activeModule = list.find((module) => module.slug === activeSlug);
+          const docTypes = activeModule?.documentTypes ?? [];
+          const activeType = docTypes.includes(prev.documentType) ? prev.documentType : docTypes[0] ?? '';
+
+          return {
+            ...prev,
+            moduleSlug: activeSlug,
+            documentType: activeType,
+          };
+        });
+      } else {
+        setUploadForm((prev) => ({
+          ...prev,
+          moduleSlug: '',
+          documentType: '',
+        }));
+      }
+
+      setBannerError('');
+    } catch (error) {
+      setModules([]);
+      setBannerError(error.message);
+    }
+  };
+
+  const refreshAuditLogs = async () => {
+    try {
+      const payload = await apiFetch('/audit-logs');
+      setAuditLogs(payload?.logs ?? []);
+      setBannerError('');
+    } catch (error) {
+      setBannerError(error.message);
+    }
+  };
+
+  useEffect(() => {
+    refreshDashboard();
+    refreshModules();
+    refreshAuditLogs();
+  }, []);
+
+  useEffect(() => {
+    if (modules.length && !selectedModuleSlug) {
+      setSelectedModuleSlug(modules[0].slug);
+    }
+  }, [modules, selectedModuleSlug]);
+
+  useEffect(() => {
+    if (!selectedModuleSlug) return;
+    if (moduleDetails[selectedModuleSlug]) return;
+
+    let active = true;
+    setLoadingModuleSlug(selectedModuleSlug);
+
+    apiFetch(`/modules/${selectedModuleSlug}`)
+      .then((payload) => {
+        if (!active) return;
+        setModuleDetails((prev) => ({ ...prev, [selectedModuleSlug]: payload }));
+        setBannerError('');
+      })
+      .catch((error) => {
+        if (!active) return;
+        setBannerError(error.message);
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingModuleSlug('');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedModuleSlug, moduleDetails]);
+
+  const availableDocumentTypes = useMemo(() => {
+    const module = modules.find((item) => item.slug === uploadForm.moduleSlug);
+    return module?.documentTypes ?? [];
+  }, [modules, uploadForm.moduleSlug]);
+
+  const selectedModule = useMemo(
+    () => (selectedModuleSlug ? moduleDetails[selectedModuleSlug] ?? null : null),
+    [moduleDetails, selectedModuleSlug],
   );
 
-  const handleFeatureSelect = async (feature) => {
-    if (!feature) return;
-    if (feature.id === selectedFeatureId && featureDetails[feature.id]) {
-      return;
-    }
-
-    setSelectedFeatureId(feature.id);
-
-    if (featureDetails[feature.id]) {
-      return;
-    }
-
-    setLoadingFeatureId(feature.id);
-    try {
-      const payload = await apiFetch(`/features/${feature.id}`);
-      setFeatureDetails((prev) => ({ ...prev, [feature.id]: payload }));
-      setBannerError('');
-    } catch (error) {
-      setBannerError(error.message);
-      setSelectedFeatureId(null);
-    } finally {
-      setLoadingFeatureId(null);
-    }
-  };
-
-  const handleLaunchFeature = async () => {
-    if (!selectedFeatureId) return;
-    try {
-      const payload = await apiFetch(`/features/${selectedFeatureId}/actions/launch`, {
-        method: 'POST',
-      });
-      setToast(payload?.message ?? 'Action completed');
-      setBannerError('');
-    } catch (error) {
-      setBannerError(error.message);
-    }
-  };
-
-  const openRequestModal = () => {
-    const defaultFeatureId = selectedFeatureId ?? features[0]?.id ?? '';
-    setRequestForm((prev) => ({
-      ...initialRequestState,
+  const handleModuleSelect = (slug) => {
+    setSelectedModuleSlug(slug);
+    const module = modules.find((item) => item.slug === slug);
+    const documentTypes = module?.documentTypes ?? [];
+    setUploadForm((prev) => ({
       ...prev,
-      featureId: defaultFeatureId,
+      moduleSlug: slug,
+      documentType: documentTypes.includes(prev.documentType)
+        ? prev.documentType
+        : documentTypes[0] ?? '',
     }));
-    setRequestOpen(true);
   };
 
-  const closeRequestModal = () => {
-    setRequestOpen(false);
+  const handleUploadField = (field, value) => {
+    setUploadForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleRequestField = (field, value) => {
-    setRequestForm((prev) => ({ ...prev, [field]: value }));
+  const handleFileChange = (event) => {
+    const file = event.target.files?.[0];
+    setUploadFile(file || null);
+
+    if (file && !uploadForm.title) {
+      const cleaned = file.name.replace(/\.[^./]+$/, '').replace(/[_-]+/g, ' ');
+      setUploadForm((prev) => ({ ...prev, title: cleaned }));
+    }
   };
 
-  const handleSubmitRequest = async (event) => {
+  const resetFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleUploadSubmit = async (event) => {
     event.preventDefault();
-    setSubmittingRequest(true);
+
+    if (!uploadFile) {
+      setBannerError('Please attach a scan to upload.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+    formData.append('moduleSlug', uploadForm.moduleSlug);
+    formData.append('documentType', uploadForm.documentType || 'Document');
+    if (uploadForm.title) formData.append('title', uploadForm.title);
+    if (uploadForm.notes) formData.append('notes', uploadForm.notes);
+    if (uploadForm.uploadedBy) formData.append('uploadedBy', uploadForm.uploadedBy);
+
+    setUploading(true);
+
     try {
-      const payload = await apiFetch('/requests', {
+      const payload = await apiFetch('/documents', {
         method: 'POST',
-        body: JSON.stringify(requestForm),
+        body: formData,
       });
-      setToast(payload?.message ?? 'Request submitted');
+
+      setUploadPreview(payload?.document ?? null);
+      setToast(payload?.message ?? 'Document uploaded');
       setBannerError('');
-      setRequestOpen(false);
-      setRequestForm(initialRequestState);
+      setUploadForm((prev) => ({
+        ...prev,
+        notes: '',
+        title: '',
+      }));
+      setUploadFile(null);
+      resetFileInput();
+      await Promise.all([refreshDashboard(), refreshAuditLogs()]);
     } catch (error) {
       setBannerError(error.message);
     } finally {
-      setSubmittingRequest(false);
+      setUploading(false);
     }
   };
+
+  const accuracyStat = dashboard?.stats?.find((item) => item.id === 'accuracy');
 
   return (
     <div className="app-shell">
@@ -212,22 +303,17 @@ function App() {
             <p className="hero__eyebrow">DocuHealth AI</p>
             <h1>AI-Powered Document Digitization for Government Medical Institutions</h1>
             <p className="hero__subtitle">
-              Monitor document throughput, validation queues, and integration health across facilities in real time.
+              Monitor digitization throughput, validation queues, and HIS sync readiness across your facilities in real time.
             </p>
             {dashboard?.lastUpdated && (
               <p className="hero__timestamp">Updated {formatRelativeTime(dashboard.lastUpdated)}</p>
             )}
           </div>
           <div className="hero__actions">
-            {dashboard?.status && <span className="status-pill">{dashboard.status}</span>}
-            <button
-              type="button"
-              className="cta"
-              onClick={openRequestModal}
-              disabled={!features.length}
-            >
-              New Request
-            </button>
+            <span className={`status-pill status-pill--${dashboard?.status === 'Operational' ? 'success' : 'warning'}`}>
+              {dashboard?.status ?? 'Loading'}
+            </span>
+            {accuracyStat && <span className="hero__accuracy">Accuracy {accuracyStat.value}</span>}
           </div>
         </header>
 
@@ -242,11 +328,11 @@ function App() {
               </div>
               <div className="stats-grid">
                 {(dashboard?.stats ?? []).map((item) => (
-                  <article key={item.id ?? item.label} className="stat-card">
+                  <article key={item.id} className="stat-card">
                     <div className="stat-card__icon" aria-hidden="true">
                       {item.icon}
                     </div>
-                    <div>
+                    <div className="stat-card__content">
                       <p className="stat-card__label">{item.label}</p>
                       <p className="stat-card__value">{item.value}</p>
                     </div>
@@ -254,235 +340,396 @@ function App() {
                   </article>
                 ))}
               </div>
-              {(dashboard?.operations ?? []).length > 0 && (
-                <div className="dashboard__operations">
-                  <h3>Operations</h3>
-                  <ul>
-                    {dashboard.operations.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
             </section>
 
-            <nav className="feature-list card" aria-label="DocuHealth modules">
-              <div className="feature-list__head">
+            <section className="workflow-grid">
+              <article className="workflow-card workflow-card--scanner card">
+                <header>
+                  <h3>Document Scanner</h3>
+                  <p>Upload new scans for OCR and immediate routing into the HIS.</p>
+                </header>
+                <form className="scanner-form" onSubmit={handleUploadSubmit}>
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Module</span>
+                      <select
+                        value={uploadForm.moduleSlug}
+                        onChange={(event) => handleModuleSelect(event.target.value)}
+                        required
+                        disabled={!modules.length}
+                      >
+                        <option value="" disabled>
+                          {modules.length ? 'Select a module' : 'No modules available'}
+                        </option>
+                        {modules.map((module) => (
+                          <option key={module.slug} value={module.slug}>
+                            {module.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="field">
+                      <span>Document type</span>
+                      <select
+                        value={uploadForm.documentType}
+                        onChange={(event) => handleUploadField('documentType', event.target.value)}
+                        required
+                        disabled={!availableDocumentTypes.length}
+                      >
+                        {availableDocumentTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                        {!availableDocumentTypes.length && <option value="">No templates</option>}
+                      </select>
+                    </label>
+                  </div>
+
+                  <label className="field">
+                    <span>Scan</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.zip"
+                      onChange={handleFileChange}
+                      required
+                    />
+                    {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
+                  </label>
+
+                  <label className="field">
+                    <span>Title</span>
+                    <input
+                      type="text"
+                      value={uploadForm.title}
+                      onChange={(event) => handleUploadField('title', event.target.value)}
+                      placeholder="e.g. OPD Intake - Aditi Sharma"
+                    />
+                  </label>
+
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Operator notes</span>
+                      <textarea
+                        rows="3"
+                        value={uploadForm.notes}
+                        onChange={(event) => handleUploadField('notes', event.target.value)}
+                        placeholder="Add context for the validation team"
+                      />
+                    </label>
+                    <label className="field">
+                      <span>Uploaded by</span>
+                      <input
+                        type="text"
+                        value={uploadForm.uploadedBy}
+                        onChange={(event) => handleUploadField('uploadedBy', event.target.value)}
+                        placeholder="e.g. Nurse Radhika"
+                      />
+                    </label>
+                  </div>
+
+                  <button type="submit" className="cta" disabled={uploading}>
+                    {uploading ? 'Processing…' : 'Run OCR' }
+                  </button>
+                </form>
+
+                {uploadPreview && (
+                  <section className="scanner-preview">
+                    <div>
+                      <h4>Latest OCR result</h4>
+                      <p>{uploadPreview.summary}</p>
+                      <dl className="preview-fields">
+                        {(uploadPreview.extractedFields ?? []).map((field) => (
+                          <div key={field.label}>
+                            <dt>{field.label}</dt>
+                            <dd>{field.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                      {uploadPreview.validation && (
+                        <p className="preview-validation">
+                          Validation ticket #{uploadPreview.validation.id} assigned — priority {uploadPreview.validation.priority}.
+                        </p>
+                      )}
+                    </div>
+                  </section>
+                )}
+              </article>
+
+              <article className="workflow-card card">
+                <header>
+                  <h3>Upload Scans</h3>
+                  <p>Monitor recent ingestion batches and OCR confidence.</p>
+                </header>
+                <ul className="document-list">
+                  {recentDocuments.map((document) => (
+                    <li key={document.id}>
+                      <div>
+                        <span className="document-list__title">{document.title}</span>
+                        <span className="document-list__meta">
+                          {document.documentType}
+                          {document.module?.name ? ` • ${document.module.name}` : ''}
+                          {document.uploadedAt && ` • ${formatRelativeTime(document.uploadedAt)}`}
+                        </span>
+                      </div>
+                      <div className="document-list__status">
+                        <span
+                          className={`badge badge--${
+                            document.status === 'Validated'
+                              ? 'success'
+                              : document.status === 'Pending Validation'
+                              ? 'warning'
+                              : 'info'
+                          }`}
+                        >
+                          {document.status}
+                        </span>
+                        {document.confidence !== null && (
+                          <span className="document-list__confidence">
+                            {`${Number(document.confidence).toFixed(1)}%`}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                  {!recentDocuments.length && <li className="empty-state">No documents available yet.</li>}
+                </ul>
+              </article>
+
+              <article className="workflow-card card">
+                <header>
+                  <h3>Medicine Stock Parser</h3>
+                  <p>Digitized pharmacy inventory with automatic low stock alerts.</p>
+                </header>
+                <div className="stock-table__wrapper">
+                  <table className="stock-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">Item</th>
+                        <th scope="col">Quantity</th>
+                        <th scope="col">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {medicineStock.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <span className="stock-item__name">{item.itemName}</span>
+                            <span className="stock-item__time">Updated {formatRelativeTime(item.lastUpdated)}</span>
+                          </td>
+                          <td>
+                            {item.quantity} {item.unit}
+                            <span className="stock-item__threshold">Threshold {item.threshold}</span>
+                          </td>
+                          <td>
+                            <span className={`badge badge--${item.status === 'low' ? 'warning' : 'success'}`}>
+                              {item.status === 'low' ? 'Reorder' : 'Healthy'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                      {!medicineStock.length && (
+                        <tr>
+                          <td colSpan="3" className="empty-state">
+                            No stock updates yet.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <article className="workflow-card card">
+                <header>
+                  <h3>Pending Validations</h3>
+                  <p>Keep critical documents on track for HIS synchronization.</p>
+                </header>
+                <ul className="validation-list">
+                  {pendingValidations.map((item) => (
+                    <li key={item.id}>
+                      <div>
+                        <span className="validation-list__title">{item.document.title}</span>
+                        <span className="validation-list__meta">
+                          {item.document.type}
+                          {item.document.module?.name ? ` • ${item.document.module.name}` : ''}
+                          {item.document.uploadedAt && ` • ${formatRelativeTime(item.document.uploadedAt)}`}
+                        </span>
+                      </div>
+                      <div className="validation-list__status">
+                        <span className={`badge badge--${item.priority === 'high' ? 'warning' : 'info'}`}>
+                          {item.priority === 'high' ? 'High priority' : 'Normal'}
+                        </span>
+                        {item.dueAt && <span>Due {formatRelativeTime(item.dueAt)}</span>}
+                      </div>
+                    </li>
+                  ))}
+                  {!pendingValidations.length && <li className="empty-state">No validations pending 🎉</li>}
+                </ul>
+              </article>
+
+              <article className="workflow-card card">
+                <header>
+                  <h3>Audit Logs</h3>
+                  <p>Trace overrides, HIS syncs, and compliance exports.</p>
+                </header>
+                <ul className="audit-list">
+                  {auditLogs.map((log) => (
+                    <li key={log.id}>
+                      <div>
+                        <span className="audit-list__title">{log.action}</span>
+                        <span className="audit-list__meta">
+                          {log.module?.name ? `${log.module.name} • ` : ''}
+                          {log.actor}
+                          {log.createdAt && ` • ${formatRelativeTime(log.createdAt)}`}
+                        </span>
+                      </div>
+                      <p>{log.detail}</p>
+                    </li>
+                  ))}
+                  {!auditLogs.length && <li className="empty-state">No audit activity recorded.</li>}
+                </ul>
+              </article>
+            </section>
+          </section>
+
+          <aside className="module-panel">
+            <section className="module-list card" aria-label="DocuHealth modules">
+              <header className="module-list__head">
                 <h2>Modules</h2>
-                <p>Select a workflow to view live status and run history.</p>
-              </div>
-              <div className="feature-list__items">
-                {features.map((feature) => {
-                  const isActive = selectedFeatureId === feature.id;
-                  const isLoading = loadingFeatureId === feature.id;
+                <p>Select a workflow to view telemetry and contacts.</p>
+              </header>
+              <div className="module-list__items">
+                {modules.map((module) => {
+                  const isActive = module.slug === selectedModuleSlug;
                   return (
                     <button
-                      key={feature.id}
+                      key={module.slug}
                       type="button"
-                      className={`feature-list__item${isActive ? ' is-active' : ''}`}
-                      onClick={() => handleFeatureSelect(feature)}
+                      className={`module-item${isActive ? ' is-active' : ''}`}
+                      onClick={() => handleModuleSelect(module.slug)}
                     >
-                      <span className="feature-list__icon" aria-hidden="true">
-                        {feature.icon}
+                      <span className="module-item__icon" aria-hidden="true">
+                        {module.icon}
                       </span>
-                      <span className="feature-list__content">
-                        <span className="feature-list__name">{feature.name}</span>
-                        <span className="feature-list__description">{feature.summary}</span>
+                      <span className="module-item__body">
+                        <span className="module-item__name">{module.name}</span>
+                        <span className="module-item__summary">{module.summary}</span>
                       </span>
-                      <span className="feature-list__meta">
-                        <span className={`badge badge--${feature.status === 'Operational' ? 'success' : 'warning'}`}>
-                          {feature.status}
+                      <span className="module-item__meta">
+                        <span className={`badge badge--${module.status === 'Operational' ? 'success' : 'warning'}`}>
+                          {module.status}
                         </span>
-                        <span className="feature-list__time">{isLoading ? 'Loading…' : feature.lastRun}</span>
+                        {module.lastRun && (
+                          <span className="module-item__time">{formatRelativeTime(module.lastRun)}</span>
+                        )}
                       </span>
                     </button>
                   );
                 })}
+                {!modules.length && <p className="empty-state">No modules configured.</p>}
               </div>
-            </nav>
-          </section>
+            </section>
 
-          <aside className={`detail card${selectedFeature ? ' is-active' : ''}`} aria-live="polite">
-            {selectedFeature ? (
-              <>
-                <header className="detail__header">
-                  <div>
-                    <p className="detail__eyebrow">Workflow detail</p>
-                    <h2>{selectedFeature.name}</h2>
-                  </div>
-                  <div className="detail__status">
-                    <span className={`badge badge--${selectedFeature.status === 'Operational' ? 'success' : 'warning'}`}>
-                      {selectedFeature.status}
-                    </span>
-                    {selectedFeature.lastRun && (
-                      <span className="detail__time">Last run {selectedFeature.lastRun}</span>
-                    )}
-                  </div>
-                </header>
-                <p className="detail__description">{selectedFeature.description}</p>
-
-                {(selectedFeature.metrics ?? []).length > 0 && (
-                  <div className="detail__metrics">
-                    {selectedFeature.metrics.map((metric) => (
-                      <div key={metric.label} className="detail__metric">
-                        <span className="detail__metric-label">{metric.label}</span>
-                        <span className="detail__metric-value">{metric.value}</span>
-                        {metric.caption && <span className="detail__metric-caption">{metric.caption}</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {(selectedFeature.recentActivity ?? []).length > 0 && (
-                  <div className="detail__section">
-                    <h3>Recent activity</h3>
-                    <ul className="timeline">
-                      {selectedFeature.recentActivity.map((item, index) => (
-                        <li key={`${item.time}-${index}`}>
-                          <span className="timeline__time">{item.time}</span>
-                          <span className="timeline__text">{item.detail}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(selectedFeature.nextSteps ?? []).length > 0 && (
-                  <div className="detail__section">
-                    <h3>Next steps</h3>
-                    <ul className="checklist">
-                      {selectedFeature.nextSteps.map((step) => (
-                        <li key={step}>{step}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {(selectedFeature.contacts ?? []).length > 0 && (
-                  <div className="detail__section">
-                    <h3>Points of contact</h3>
-                    <ul className="contact-list">
-                      {selectedFeature.contacts.map((contact) => (
-                        <li key={contact.email ?? contact.name}>
-                          <span className="contact-list__name">{contact.name}</span>
-                          <span className="contact-list__role">{contact.role}</span>
-                          {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
-                          {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                <div className="detail__actions">
-                  <button type="button" className="secondary" onClick={handleLaunchFeature}>
-                    {selectedFeature.cta ?? 'Launch module'}
-                  </button>
-                  <button type="button" className="ghost" onClick={openRequestModal}>
-                    Raise support ticket
-                  </button>
+            <section className="module-detail card" aria-live="polite">
+              {loadingModuleSlug && !selectedModule ? (
+                <div className="module-detail__empty">
+                  <p>Loading module details…</p>
                 </div>
-              </>
-            ) : (
-              <div className="detail__empty">
-                <h2>Select a module to inspect its live telemetry</h2>
-                <p>The panel will populate with run history, performance metrics, and support contacts.</p>
-              </div>
-            )}
+              ) : selectedModule ? (
+                <>
+                  <header className="module-detail__header">
+                    <div>
+                      <p className="module-detail__eyebrow">Workflow detail</p>
+                      <h2>{selectedModule.name}</h2>
+                    </div>
+                    <div className="module-detail__status">
+                      <span
+                        className={`badge badge--${selectedModule.status === 'Operational' ? 'success' : 'warning'}`}
+                      >
+                        {selectedModule.status}
+                      </span>
+                      {selectedModule.lastSynced && (
+                        <span className="module-detail__time">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
+                      )}
+                    </div>
+                  </header>
+                  <p className="module-detail__description">{selectedModule.description}</p>
+
+                  {(selectedModule.metrics ?? []).length > 0 && (
+                    <div className="module-detail__metrics">
+                      {selectedModule.metrics.map((metric) => (
+                        <div key={metric.label} className="module-detail__metric">
+                          <span className="module-detail__metric-value">{metric.value}</span>
+                          <span className="module-detail__metric-label">{metric.label}</span>
+                          {metric.caption && (
+                            <span className="module-detail__metric-caption">{metric.caption}</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {(selectedModule.recentActivity ?? []).length > 0 && (
+                    <div className="module-detail__section">
+                      <h3>Recent activity</h3>
+                      <ul className="timeline">
+                        {selectedModule.recentActivity.map((activity, index) => (
+                          <li key={`${activity.time}-${index}`}>
+                            <span className="timeline__time">{formatRelativeTime(activity.time)}</span>
+                            <span className="timeline__text">{activity.detail}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {(selectedModule.nextSteps ?? []).length > 0 && (
+                    <div className="module-detail__section">
+                      <h3>Next steps</h3>
+                      <ul className="checklist">
+                        {selectedModule.nextSteps.map((step) => (
+                          <li key={step}>{step}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {(selectedModule.contacts ?? []).length > 0 && (
+                    <div className="module-detail__section">
+                      <h3>Points of contact</h3>
+                      <ul className="contact-list">
+                        {selectedModule.contacts.map((contact) => (
+                          <li key={contact.email ?? contact.name}>
+                            <span className="contact-list__name">{contact.name}</span>
+                            <span className="contact-list__role">{contact.role}</span>
+                            {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+                            {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="module-detail__empty">
+                  <p>Select a module to inspect live telemetry.</p>
+                </div>
+              )}
+            </section>
           </aside>
         </main>
-      </div>
 
-      {requestOpen && (
-        <div className="modal" role="dialog" aria-modal="true">
-          <div className="modal__backdrop" onClick={closeRequestModal} aria-hidden="true" />
-          <div className="modal__body card">
-            <header className="modal__header">
-              <h2>Submit a workflow request</h2>
-              <button type="button" onClick={closeRequestModal} aria-label="Close">
-                ×
-              </button>
-            </header>
-            <form className="modal__form" onSubmit={handleSubmitRequest}>
-              <label className="field">
-                <span>Module</span>
-                <select
-                  value={requestForm.featureId}
-                  onChange={(event) => handleRequestField('featureId', event.target.value)}
-                  required
-                >
-                  <option value="" disabled>
-                    Select a module
-                  </option>
-                  {features.map((feature) => (
-                    <option key={feature.id} value={feature.id}>
-                      {feature.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="form-grid">
-                <label className="field">
-                  <span>Requester name</span>
-                  <input
-                    type="text"
-                    value={requestForm.requesterName}
-                    onChange={(event) => handleRequestField('requesterName', event.target.value)}
-                    placeholder="e.g. Dr. Ananya Kulkarni"
-                    required
-                  />
-                </label>
-                <label className="field">
-                  <span>Department</span>
-                  <input
-                    type="text"
-                    value={requestForm.department}
-                    onChange={(event) => handleRequestField('department', event.target.value)}
-                    placeholder="Radiology"
-                    required
-                  />
-                </label>
-              </div>
-
-              <label className="field">
-                <span>Priority</span>
-                <select
-                  value={requestForm.priority}
-                  onChange={(event) => handleRequestField('priority', event.target.value)}
-                  required
-                >
-                  <option value="normal">Normal</option>
-                  <option value="high">High</option>
-                  <option value="critical">Critical</option>
-                </select>
-              </label>
-
-              <label className="field">
-                <span>Notes</span>
-                <textarea
-                  rows="3"
-                  value={requestForm.notes}
-                  onChange={(event) => handleRequestField('notes', event.target.value)}
-                  placeholder="Share additional context so the DocuHealth team can assist quickly."
-                />
-              </label>
-
-              <button type="submit" className="cta" disabled={submittingRequest}>
-                {submittingRequest ? 'Sending…' : 'Submit request'}
-              </button>
-            </form>
+        {toast && (
+          <div className="toast" role="status">
+            {toast}
           </div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="toast" role="status">
-          {toast}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
 export default App;
+
