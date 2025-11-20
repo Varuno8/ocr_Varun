@@ -273,7 +273,10 @@ function App() {
   const selectedModuleSummary = modules.find((item) => item.slug === selectedModuleSlug);
 
   return (
-    <div className="page-shell">
+    <div className="app-shell">
+      <div className="bg-haze" aria-hidden="true" />
+      <div className="bg-glow" aria-hidden="true" />
+
       {bannerError && (
         <div className="banner banner--error" role="alert">
           <span>{bannerError}</span>
@@ -283,67 +286,90 @@ function App() {
         </div>
       )}
 
-      <header className="topbar">
-        <div>
-          <p className="topbar__eyebrow">DocuHealth AI</p>
-          <div className="topbar__titles">
-            <h1>AI-Powered Document Digitization for Medical Institutions</h1>
-            <p>Clean, calm, and reliable oversight for every scan, validation, and sync.</p>
+      <header className="navbar">
+        <div className="navbar__brand">
+          <div className="orb" aria-hidden="true" />
+          <div>
+            <p className="eyebrow">DocuHealth AI</p>
+            <h1>AI-powered medical intelligence</h1>
           </div>
         </div>
-        <div className="topbar__status">
-          <span className="pill pill--success">Online · Connected to HIS</span>
-          <span className="pill pill--ghost">{dashboard?.status ?? 'Loading'} · {systemLatency}</span>
+        <div className="navbar__status">
+          <span className="pill pill--success">System online</span>
+          <span className="pill pill--ghost">Latency {systemLatency}</span>
         </div>
       </header>
 
-      <main className="page-content">
-        <section className="hero-card card">
-          <div>
-            <p className="hero-card__eyebrow">Medical Document Processing Dashboard</p>
-            <h2>Monitor throughput, validation queues, and digitization accuracy in real time.</h2>
+      <main className="page-grid">
+        <section className="hero">
+          <div className="hero__copy">
+            <div className="badge">Precision-grade document cognition</div>
+            <h2>
+              Fluid oversight for every <span>scan</span>, <span>validation</span>, and <span>handoff</span>.
+            </h2>
+            <p>
+              Whisper-quiet automation meets clinical control. Monitor throughput, anomalies, and OCR accuracy
+              from a calming cockpit inspired by Apple Health and Linear.
+            </p>
+            <div className="hero__actions">
+              <button type="button" className="button button--primary">
+                Launch console
+              </button>
+              <button type="button" className="button button--ghost">
+                View playbooks
+              </button>
+            </div>
             {dashboard?.lastUpdated && (
-              <p className="hero-card__meta">Updated {formatRelativeTime(dashboard.lastUpdated)}</p>
+              <div className="hero__meta">Updated {formatRelativeTime(dashboard.lastUpdated)}</div>
             )}
           </div>
-          <div className="hero-card__metrics">
-            {(dashboard?.stats ?? []).slice(0, 3).map((stat) => (
-              <div key={stat.id} className="mini-metric">
-                <p>{stat.label}</p>
-                <strong>{stat.value}</strong>
+          <div className="hero__visual">
+            <div className="glass-panel">
+              <div className="ecg" aria-hidden="true">
+                <div className="ecg__grid" />
+                <div className="ecg__line" />
               </div>
-            ))}
-            {accuracyStat && (
-              <div className="mini-metric mini-metric--accent">
-                <p>Avg OCR Accuracy</p>
-                <strong>{accuracyStat.value}</strong>
-                <span className="mini-metric__caption">Powered by Google Document AI</span>
+              <div className="metric-grid">
+                {(dashboard?.stats ?? []).slice(0, 3).map((stat) => (
+                  <div key={stat.id} className="metric-card">
+                    <p>{stat.label}</p>
+                    <strong>{stat.value}</strong>
+                    {stat.trend && <small>{stat.trend}</small>}
+                  </div>
+                ))}
+                {accuracyStat && (
+                  <div className="metric-card metric-card--accent">
+                    <p>Avg OCR Accuracy</p>
+                    <strong>{accuracyStat.value}</strong>
+                    <small>Google Document AI</small>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </section>
 
-        <section className="stats-row">
+        <section className="stat-grid">
           {(dashboard?.stats ?? []).map((item) => (
-            <article key={item.id} className="stat-tile card">
-              <div className="stat-tile__header">
-                <span className="stat-tile__label">{item.label}</span>
-                <span className="stat-tile__icon" aria-hidden="true">
+            <article key={item.id} className="stat-card glass">
+              <div className="stat-card__header">
+                <span className="icon" aria-hidden="true">
                   {item.icon}
                 </span>
+                <span className="stat-card__label">{item.label}</span>
               </div>
-              <p className="stat-tile__value">{item.value}</p>
-              {item.trend && <span className="stat-tile__trend">{item.trend}</span>}
+              <div className="stat-card__value">{item.value}</div>
+              {item.trend && <div className="stat-card__trend">{item.trend}</div>}
             </article>
           ))}
         </section>
 
-        <section className="modules card">
+        <section className="modules glass">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Modules</p>
-              <h3>Choose a digitization flow</h3>
-              <p className="muted">Tap a module to route uploads and view live telemetry.</p>
+              <h3>Smart digitization lanes</h3>
+              <p className="muted">Route uploads, watch telemetry, and keep validators focused.</p>
             </div>
             {selectedModuleSummary && (
               <div className="section-heading__meta">
@@ -354,7 +380,6 @@ function App() {
               </div>
             )}
           </div>
-
           <div className="modules__grid">
             {modules.map((module) => {
               const isActive = module.slug === selectedModuleSlug;
@@ -362,7 +387,7 @@ function App() {
                 <button
                   key={module.slug}
                   type="button"
-                  className={`module-tile${isActive ? ' is-selected' : ''}`}
+                  className={`module-tile glass ${isActive ? 'is-selected' : ''}`}
                   onClick={() => handleModuleSelect(module.slug)}
                 >
                   <div className="module-tile__icon" aria-hidden="true">
@@ -386,14 +411,14 @@ function App() {
         </section>
 
         <section className="workspace">
-          <article className="upload card">
+          <article className="panel upload glass">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Upload Panel</p>
-                <h3>Upload PDFs or Images</h3>
-                <p className="muted">Drop PDFs, JPG, PNG, or WEBP up to 200MB and process with Google Document AI.</p>
+                <p className="eyebrow">Upload system</p>
+                <h3>Drop, process, and stream OCR</h3>
+                <p className="muted">Animated border, teal glow, and live progress tracking.</p>
               </div>
-              <span className="pill pill--ghost">Calm processing</span>
+              <span className="pill pill--ghost">Encrypted transit</span>
             </div>
 
             <form className="upload__form" onSubmit={handleUploadSubmit}>
@@ -430,7 +455,7 @@ function App() {
                 </label>
               </div>
 
-              <div className="dropzone">
+              <div className={`dropzone ${uploading ? 'is-uploading' : ''}`}>
                 <div className="dropzone__content">
                   <p className="dropzone__title">Drag & drop files here</p>
                   <p className="dropzone__subtitle">PDF, JPG, PNG, WEBP up to 200MB</p>
@@ -459,8 +484,10 @@ function App() {
                 </div>
                 {uploading && (
                   <div className="dropzone__overlay" role="status">
-                    <div className="spinner" aria-hidden="true" />
-                    <p>Processing with Google Document AI…</p>
+                    <div className="progress-ring">
+                      <div className="progress-ring__segment" />
+                    </div>
+                    <p>Processing…</p>
                   </div>
                 )}
               </div>
@@ -505,12 +532,12 @@ function App() {
             </form>
           </article>
 
-          <article className="results card" aria-live="polite">
+          <article className="panel results glass" aria-live="polite">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">OCR Result Viewer</p>
+                <p className="eyebrow">Output viewer</p>
                 <h3>{uploadPreview ? uploadPreview.title ?? 'Processed file' : 'Awaiting upload'}</h3>
-                <p className="muted">Review extracted text and export into your HIS workflows.</p>
+                <p className="muted">Review extracted text and export into HIS workflows.</p>
               </div>
               {uploadPreview?.method && <span className="pill pill--ghost">{uploadPreview.method}</span>}
             </div>
@@ -520,98 +547,53 @@ function App() {
                 <div className="result__meta">
                   {uploadPreview.fileName && (
                     <div>
-                      <p className="muted">File name</p>
-                      <strong>{uploadPreview.fileName}</strong>
+                      <span className="muted">Filename</span>
+                      <p>{uploadPreview.fileName}</p>
                     </div>
                   )}
-                  {uploadPreview.timeTaken && (
+                  {uploadPreview.module && (
                     <div>
-                      <p className="muted">Time taken</p>
-                      <strong>{uploadPreview.timeTaken}</strong>
+                      <span className="muted">Module</span>
+                      <p>{uploadPreview.module}</p>
                     </div>
                   )}
-                  {uploadPreview.method && (
+                  {uploadPreview.duration && (
                     <div>
-                      <p className="muted">Method</p>
-                      <strong>{uploadPreview.method}</strong>
+                      <span className="muted">Duration</span>
+                      <p>{uploadPreview.duration}</p>
                     </div>
                   )}
                 </div>
-                <div className="result__text" role="textbox">
-                  <pre>{uploadPreview.text ?? uploadPreview.summary ?? 'Result ready for review.'}</pre>
+                <div className="result__text">
+                  <pre>{uploadPreview.content ?? uploadPreview.text ?? 'Content ready.'}</pre>
                 </div>
                 <div className="result__actions">
-                  <button type="button" className="button button--primary">Download as .txt</button>
-                  <button type="button" className="button button--ghost">Download as .md</button>
+                  <button type="button" className="button button--ghost">
+                    Copy text
+                  </button>
+                  <button type="button" className="button button--primary">
+                    Export to HIS
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="result__empty">
-                <p>No OCR results yet. Upload a file to see extracted content.</p>
+                <p>Upload a scan to preview OCR output with a calming glass effect.</p>
               </div>
             )}
-
-            <div className="recent-documents">
-              <div className="section-heading">
-                <div>
-                  <p className="eyebrow">Recent uploads</p>
-                  <h4>Validation queue</h4>
-                </div>
-              </div>
-              <ul className="document-list">
-                {recentDocuments.map((document) => (
-                  <li key={document.id}>
-                    <div>
-                      <span className="document-list__title">{document.title}</span>
-                      <span className="document-list__meta">
-                        {document.documentType}
-                        {document.module?.name ? ` • ${document.module.name}` : ''}
-                        {document.uploadedAt && ` • ${formatRelativeTime(document.uploadedAt)}`}
-                      </span>
-                    </div>
-                    <div className="document-list__status">
-                      <span
-                        className={`pill pill--${
-                          document.status === 'Validated'
-                            ? 'success'
-                            : document.status === 'Pending Validation'
-                            ? 'warning'
-                            : 'info'
-                        }`}
-                      >
-                        {document.status}
-                      </span>
-                      {document.confidence !== null && (
-                        <span className="document-list__confidence">
-                          {`${Number(document.confidence).toFixed(1)}%`}
-                        </span>
-                      )}
-                    </div>
-                  </li>
-                ))}
-                {!recentDocuments.length && <li className="empty-state">No documents available yet.</li>}
-              </ul>
-            </div>
           </article>
         </section>
 
-        <section className="module-detail card" aria-live="polite">
+        <section className="panel module-detail glass">
           <div className="section-heading">
             <div>
               <p className="eyebrow">Live telemetry</p>
-              <h3>{selectedModule?.name ?? 'Select a module to inspect'}</h3>
-              <p className="muted">Peek into throughput, syncs, and recent activity.</p>
+              <h3>{selectedModuleSummary ? selectedModuleSummary.name : 'Module details'}</h3>
+              <p className="muted">Fine-grain vitals, recent activity, and next actions.</p>
             </div>
-            <div className="module-detail__status">
-              {selectedModule && (
-                <span className={`pill pill--${selectedModule.status === 'Operational' ? 'success' : 'warning'}`}>
-                  {selectedModule.status}
-                </span>
-              )}
-              {selectedModule?.lastSynced && (
-                <span className="muted">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
-              )}
-            </div>
+            {selectedModule?.lastSynced && (
+              <span className="muted">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
+            )}
           </div>
 
           {loadingModuleSlug && !selectedModule ? (
@@ -684,10 +666,10 @@ function App() {
           )}
         </section>
 
-        <section className="audit card">
+        <section className="panel audit glass">
           <div className="section-heading">
             <div>
-              <p className="eyebrow">Audit Logs</p>
+              <p className="eyebrow">Audit logs</p>
               <h3>Trace every document event</h3>
               <p className="muted">Time, filename, module, status, and duration at a glance.</p>
             </div>
