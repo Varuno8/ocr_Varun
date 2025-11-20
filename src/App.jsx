@@ -270,439 +270,465 @@ function App() {
 
   const accuracyStat = dashboard?.stats?.find((item) => item.id === 'accuracy');
   const systemLatency = dashboard?.latency ?? '42 ms';
+  const selectedModuleSummary = modules.find((item) => item.slug === selectedModuleSlug);
 
   return (
-    <div className="app-shell">
-      <div className="background-grid" aria-hidden="true" />
-      <div className="background-noise" aria-hidden="true" />
-      <div className="app-shell__inner">
-        {bannerError && (
-          <div className="banner banner--error" role="alert">
-            <span>{bannerError}</span>
-            <button type="button" onClick={() => setBannerError('')} aria-label="Dismiss error">
-              ×
-            </button>
-          </div>
-        )}
+    <div className="page-shell">
+      {bannerError && (
+        <div className="banner banner--error" role="alert">
+          <span>{bannerError}</span>
+          <button type="button" onClick={() => setBannerError('')} aria-label="Dismiss error">
+            ×
+          </button>
+        </div>
+      )}
 
-        <header className="hero card">
-          <div className="hero__text">
-            <p className="hero__eyebrow">DocuHealth AI</p>
-            <h1>Clinical Futurism for Medical Digitization</h1>
-            <p className="hero__subtitle">
-              A living console that streams your scan pipelines, OCR pulse, and validation workflows with surgical clarity.
-            </p>
+      <header className="topbar">
+        <div>
+          <p className="topbar__eyebrow">DocuHealth AI</p>
+          <div className="topbar__titles">
+            <h1>AI-Powered Document Digitization for Medical Institutions</h1>
+            <p>Clean, calm, and reliable oversight for every scan, validation, and sync.</p>
+          </div>
+        </div>
+        <div className="topbar__status">
+          <span className="pill pill--success">Online · Connected to HIS</span>
+          <span className="pill pill--ghost">{dashboard?.status ?? 'Loading'} · {systemLatency}</span>
+        </div>
+      </header>
+
+      <main className="page-content">
+        <section className="hero-card card">
+          <div>
+            <p className="hero-card__eyebrow">Medical Document Processing Dashboard</p>
+            <h2>Monitor throughput, validation queues, and digitization accuracy in real time.</h2>
             {dashboard?.lastUpdated && (
-              <p className="hero__timestamp">Synced {formatRelativeTime(dashboard.lastUpdated)}</p>
+              <p className="hero-card__meta">Updated {formatRelativeTime(dashboard.lastUpdated)}</p>
             )}
           </div>
-          <div className="hero__actions">
-            <div className="system-health" aria-live="polite">
-              <div className="system-health__label">System health</div>
-              <div className="system-health__ecg">
-                <span className="ecg-line" aria-hidden="true" />
-                <span className="system-health__status">
-                  {dashboard?.status ?? 'Loading'} • {systemLatency}
+          <div className="hero-card__metrics">
+            {(dashboard?.stats ?? []).slice(0, 3).map((stat) => (
+              <div key={stat.id} className="mini-metric">
+                <p>{stat.label}</p>
+                <strong>{stat.value}</strong>
+              </div>
+            ))}
+            {accuracyStat && (
+              <div className="mini-metric mini-metric--accent">
+                <p>Avg OCR Accuracy</p>
+                <strong>{accuracyStat.value}</strong>
+                <span className="mini-metric__caption">Powered by Google Document AI</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <section className="stats-row">
+          {(dashboard?.stats ?? []).map((item) => (
+            <article key={item.id} className="stat-tile card">
+              <div className="stat-tile__header">
+                <span className="stat-tile__label">{item.label}</span>
+                <span className="stat-tile__icon" aria-hidden="true">
+                  {item.icon}
                 </span>
               </div>
+              <p className="stat-tile__value">{item.value}</p>
+              {item.trend && <span className="stat-tile__trend">{item.trend}</span>}
+            </article>
+          ))}
+        </section>
+
+        <section className="modules card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Modules</p>
+              <h3>Choose a digitization flow</h3>
+              <p className="muted">Tap a module to route uploads and view live telemetry.</p>
             </div>
-            {accuracyStat && <span className="hero__accuracy">Accuracy {accuracyStat.value}</span>}
+            {selectedModuleSummary && (
+              <div className="section-heading__meta">
+                <span className="pill pill--ghost">{selectedModuleSummary.status}</span>
+                {selectedModuleSummary.lastRun && (
+                  <small>Last run {formatRelativeTime(selectedModuleSummary.lastRun)}</small>
+                )}
+              </div>
+            )}
           </div>
-        </header>
 
-        <main className="layout">
-          <section className="primary">
-            <section className="dashboard card">
-              <div className="dashboard__head">
-                <div>
-                  <h2>Dashboard</h2>
-                  <p>Track the daily pulse of DocuHealth AI across your campuses.</p>
-                </div>
-              </div>
-              <div className="stats-grid">
-                {(dashboard?.stats ?? []).map((item) => (
-                  <article key={item.id} className={`stat-card stat-card--${item.id}`}>
-                    <span className="stat-card__halo" aria-hidden="true" />
-                    <div className="stat-card__icon" aria-hidden="true">
-                      {item.icon}
-                    </div>
-                    <div className="stat-card__content">
-                      <p className="stat-card__label">{item.label}</p>
-                      <p className="stat-card__value">{item.value}</p>
-                    </div>
-                    {item.trend && <p className="stat-card__trend">{item.trend}</p>}
-                  </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="workflow-grid">
-              <article className="workflow-card workflow-card--scanner card">
-                <header>
-                  <h3>Document Scanner</h3>
-                  <p>Upload new scans for OCR and immediate routing into the HIS.</p>
-                </header>
-                <form className="scanner-form" onSubmit={handleUploadSubmit}>
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Module</span>
-                      <select
-                        value={uploadForm.moduleSlug}
-                        onChange={(event) => handleModuleSelect(event.target.value)}
-                        required
-                      >
-                        {modules.map((module) => (
-                          <option key={module.slug} value={module.slug}>
-                            {module.name}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field">
-                      <span>Document type</span>
-                      <select
-                        value={uploadForm.documentType}
-                        onChange={(event) => handleUploadField('documentType', event.target.value)}
-                        required
-                        disabled={!availableDocumentTypes.length}
-                      >
-                        {availableDocumentTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                        {!availableDocumentTypes.length && <option value="">No templates</option>}
-                      </select>
-                    </label>
+          <div className="modules__grid">
+            {modules.map((module) => {
+              const isActive = module.slug === selectedModuleSlug;
+              return (
+                <button
+                  key={module.slug}
+                  type="button"
+                  className={`module-tile${isActive ? ' is-selected' : ''}`}
+                  onClick={() => handleModuleSelect(module.slug)}
+                >
+                  <div className="module-tile__icon" aria-hidden="true">
+                    {module.icon}
                   </div>
+                  <div className="module-tile__body">
+                    <div className="module-tile__title">{module.name}</div>
+                    <div className="module-tile__subtitle">{module.summary}</div>
+                  </div>
+                  <div className="module-tile__status">
+                    <span className={`pill pill--${module.status === 'Operational' ? 'success' : 'warning'}`}>
+                      {module.status}
+                    </span>
+                    {module.lastRun && <small>{formatRelativeTime(module.lastRun)}</small>}
+                  </div>
+                </button>
+              );
+            })}
+            {!modules.length && <p className="empty-state">No modules configured.</p>}
+          </div>
+        </section>
 
-                  <div className="plasma-zone">
-                    <div className="plasma-zone__glow" aria-hidden="true" />
-                    <label className="field">
-                      <span>Scan</span>
+        <section className="workspace">
+          <article className="upload card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Upload Panel</p>
+                <h3>Upload PDFs or Images</h3>
+                <p className="muted">Drop PDFs, JPG, PNG, or WEBP up to 200MB and process with Google Document AI.</p>
+              </div>
+              <span className="pill pill--ghost">Calm processing</span>
+            </div>
+
+            <form className="upload__form" onSubmit={handleUploadSubmit}>
+              <div className="form-grid">
+                <label className="field">
+                  <span>Module</span>
+                  <select
+                    value={uploadForm.moduleSlug}
+                    onChange={(event) => handleModuleSelect(event.target.value)}
+                    required
+                  >
+                    {modules.map((module) => (
+                      <option key={module.slug} value={module.slug}>
+                        {module.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Document type</span>
+                  <select
+                    value={uploadForm.documentType}
+                    onChange={(event) => handleUploadField('documentType', event.target.value)}
+                    required
+                    disabled={!availableDocumentTypes.length}
+                  >
+                    {availableDocumentTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                    {!availableDocumentTypes.length && <option value="">No templates</option>}
+                  </select>
+                </label>
+              </div>
+
+              <div className="dropzone">
+                <div className="dropzone__content">
+                  <p className="dropzone__title">Drag & drop files here</p>
+                  <p className="dropzone__subtitle">PDF, JPG, PNG, WEBP up to 200MB</p>
+                  <div className="dropzone__actions">
+                    <label className="button button--primary" htmlFor="file-input">
+                      Browse files
                       <input
+                        id="file-input"
                         ref={fileInputRef}
                         type="file"
-                        accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.zip"
+                        accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.zip,.webp"
                         onChange={handleFileChange}
                         required
                       />
-                      {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
                     </label>
-                    <p className="plasma-zone__hint">Drop files to ripple the plasma field or browse to awaken the DNA loader.</p>
-                  </div>
-
-                  <label className="field">
-                    <span>Title</span>
-                    <input
-                      type="text"
-                      value={uploadForm.title}
-                      onChange={(event) => handleUploadField('title', event.target.value)}
-                      placeholder="e.g. OPD Intake - Aditi Sharma"
-                    />
-                  </label>
-
-                  <div className="form-grid">
-                    <label className="field">
-                      <span>Operator notes</span>
-                      <textarea
-                        rows="3"
-                        value={uploadForm.notes}
-                        onChange={(event) => handleUploadField('notes', event.target.value)}
-                        placeholder="Add context for the validation team"
-                      />
-                    </label>
-                    <label className="field">
-                      <span>Uploaded by</span>
-                      <input
-                        type="text"
-                        value={uploadForm.uploadedBy}
-                        onChange={(event) => handleUploadField('uploadedBy', event.target.value)}
-                        placeholder="e.g. Nurse Radhika"
-                      />
-                    </label>
-                  </div>
-
-                  <button type="submit" className="cta" disabled={uploading}>
-                    {uploading ? 'Processing…' : 'Run OCR' }
-                  </button>
-                </form>
-
-                {uploadPreview && (
-                  <section className="scanner-preview">
-                    <div>
-                      <h4>Latest OCR result</h4>
-                      <p>{uploadPreview.summary}</p>
-                      <dl className="preview-fields">
-                        {(uploadPreview.extractedFields ?? []).map((field) => (
-                          <div key={field.label}>
-                            <dt>{field.label}</dt>
-                            <dd>{field.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
-                      {uploadPreview.validation && (
-                        <p className="preview-validation">
-                          Validation ticket #{uploadPreview.validation.id} assigned — priority {uploadPreview.validation.priority}.
-                        </p>
-                      )}
-                    </div>
-                  </section>
-                )}
-              </article>
-
-              <article className="workflow-card card">
-                <header>
-                  <h3>Upload Scans</h3>
-                  <p>Monitor recent ingestion batches and OCR confidence.</p>
-                </header>
-                <ul className="document-list">
-                  {recentDocuments.map((document) => (
-                    <li key={document.id}>
-                      <div>
-                        <span className="document-list__title">{document.title}</span>
-                        <span className="document-list__meta">
-                          {document.documentType}
-                          {document.module?.name ? ` • ${document.module.name}` : ''}
-                          {document.uploadedAt && ` • ${formatRelativeTime(document.uploadedAt)}`}
-                        </span>
-                      </div>
-                      <div className="document-list__status">
-                        <span
-                          className={`badge badge--${
-                            document.status === 'Validated'
-                              ? 'success'
-                              : document.status === 'Pending Validation'
-                              ? 'warning'
-                              : 'info'
-                          }`}
-                        >
-                          {document.status}
-                        </span>
-                        {document.confidence !== null && (
-                          <span className="document-list__confidence">
-                            {`${Number(document.confidence).toFixed(1)}%`}
-                          </span>
-                        )}
-                      </div>
-                    </li>
-                  ))}
-                  {!recentDocuments.length && <li className="empty-state">No documents available yet.</li>}
-                </ul>
-              </article>
-
-              <article className="workflow-card card">
-                <header>
-                  <h3>Medicine Stock Parser</h3>
-                  <p>Digitized pharmacy inventory with automatic low stock alerts.</p>
-                </header>
-                <div className="stock-table__wrapper">
-                  <table className="stock-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Item</th>
-                        <th scope="col">Quantity</th>
-                        <th scope="col">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {medicineStock.map((item) => (
-                        <tr key={item.id}>
-                          <td>
-                            <span className="stock-item__name">{item.itemName}</span>
-                            <span className="stock-item__time">Updated {formatRelativeTime(item.lastUpdated)}</span>
-                          </td>
-                          <td>
-                            {item.quantity} {item.unit}
-                            <span className="stock-item__threshold">Threshold {item.threshold}</span>
-                          </td>
-                          <td>
-                            <span className={`badge badge--${item.status === 'low' ? 'warning' : 'success'}`}>
-                              {item.status === 'low' ? 'Reorder' : 'Healthy'}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                      {!medicineStock.length && (
-                        <tr>
-                          <td colSpan="3" className="empty-state">
-                            No stock updates yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </article>
-            </section>
-
-            <section className="style-guide card">
-              <header className="style-guide__header">
-                <div>
-                  <p className="style-guide__eyebrow">Clinical Futurism</p>
-                  <h3>Living interface language</h3>
-                </div>
-                <div className="style-guide__swatches" aria-hidden="true">
-                  <span className="swatch swatch--teal" />
-                  <span className="swatch swatch--blue" />
-                  <span className="swatch swatch--amber" />
-                  <span className="swatch swatch--coral" />
-                </div>
-              </header>
-              <div className="style-guide__grid">
-                <div className="style-guide__card">
-                  <p className="style-guide__label">Glassmorphism</p>
-                  <p className="style-guide__value">Blurred panels with 10% cyan haze and 1px ion borders.</p>
-                </div>
-                <div className="style-guide__card">
-                  <p className="style-guide__label">Motion</p>
-                  <p className="style-guide__value">Particles stream on ingest, ECG pulses mirror latency, tiles tilt on hover.</p>
-                </div>
-                <div className="style-guide__card">
-                  <p className="style-guide__label">Typography</p>
-                  <p className="style-guide__value">Inter for language, JetBrains Mono for telemetry &amp; precision metrics.</p>
-                </div>
-              </div>
-            </section>
-          </section>
-
-          <aside className="module-panel">
-            <section className="card module-list" aria-label="Modules list">
-              <div className="module-list__head">
-                <h2>Active Modules</h2>
-                <p>Switch between ingest and validation pipelines.</p>
-              </div>
-              <div className="module-list__items">
-                {modules.map((module) => {
-                  const isSelected = module.slug === selectedModuleSlug;
-
-                  return (
                     <button
-                      key={module.slug}
-                      className={`module-item${isSelected ? ' is-active' : ''}`}
                       type="button"
-                      onClick={() => handleModuleSelect(module.slug)}
+                      className="button button--ghost"
+                      onClick={() => setBannerError('Use sample file is not connected yet')}
                     >
-                      <span className="module-item__icon" aria-hidden="true">
-                        {module.icon}
-                      </span>
-                      <span className="module-item__body">
-                        <span className="module-item__name">{module.name}</span>
-                        <span className="module-item__summary">{module.summary}</span>
-                      </span>
-                      <span className="module-item__meta">
-                        <span className={`badge badge--${module.status === 'Operational' ? 'success' : 'warning'}`}>
-                          {module.status}
-                        </span>
-                        {module.lastRun && (
-                          <span className="module-item__time">{formatRelativeTime(module.lastRun)}</span>
-                        )}
-                      </span>
+                      Use sample file
                     </button>
-                  );
-                })}
-                {!modules.length && <p className="empty-state">No modules configured.</p>}
-              </div>
-            </section>
-
-            <section className="module-detail card" aria-live="polite">
-              {loadingModuleSlug && !selectedModule ? (
-                <div className="module-detail__empty">
-                  <p>Loading module details…</p>
+                  </div>
+                  {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
+                  <span className="pill pill--ghost">Powered by Google Document AI</span>
                 </div>
-              ) : selectedModule ? (
-                <>
-                  <header className="module-detail__header">
+                {uploading && (
+                  <div className="dropzone__overlay" role="status">
+                    <div className="spinner" aria-hidden="true" />
+                    <p>Processing with Google Document AI…</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="form-grid form-grid--stacked">
+                <label className="field">
+                  <span>Title</span>
+                  <input
+                    type="text"
+                    value={uploadForm.title}
+                    onChange={(event) => handleUploadField('title', event.target.value)}
+                    placeholder="e.g. OPD Intake - Aditi Sharma"
+                  />
+                </label>
+                <label className="field">
+                  <span>Uploaded by</span>
+                  <input
+                    type="text"
+                    value={uploadForm.uploadedBy}
+                    onChange={(event) => handleUploadField('uploadedBy', event.target.value)}
+                    placeholder="e.g. Nurse Radhika"
+                  />
+                </label>
+              </div>
+
+              <label className="field">
+                <span>Operator notes</span>
+                <textarea
+                  rows="3"
+                  value={uploadForm.notes}
+                  onChange={(event) => handleUploadField('notes', event.target.value)}
+                  placeholder="Add context for the validation team"
+                />
+              </label>
+
+              <div className="upload__actions">
+                <button type="submit" className="button button--primary" disabled={uploading}>
+                  {uploading ? 'Processing…' : 'Run OCR'}
+                </button>
+                <span className="muted">Files stay private and encrypted in transit.</span>
+              </div>
+            </form>
+          </article>
+
+          <article className="results card" aria-live="polite">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">OCR Result Viewer</p>
+                <h3>{uploadPreview ? uploadPreview.title ?? 'Processed file' : 'Awaiting upload'}</h3>
+                <p className="muted">Review extracted text and export into your HIS workflows.</p>
+              </div>
+              {uploadPreview?.method && <span className="pill pill--ghost">{uploadPreview.method}</span>}
+            </div>
+
+            {uploadPreview ? (
+              <div className="result__body">
+                <div className="result__meta">
+                  {uploadPreview.fileName && (
                     <div>
-                      <p className="module-detail__eyebrow">Workflow detail</p>
-                      <h2>{selectedModule.name}</h2>
+                      <p className="muted">File name</p>
+                      <strong>{uploadPreview.fileName}</strong>
                     </div>
-                    <div className="module-detail__status">
-                      <span
-                        className={`badge badge--${selectedModule.status === 'Operational' ? 'success' : 'warning'}`}
-                      >
-                        {selectedModule.status}
+                  )}
+                  {uploadPreview.timeTaken && (
+                    <div>
+                      <p className="muted">Time taken</p>
+                      <strong>{uploadPreview.timeTaken}</strong>
+                    </div>
+                  )}
+                  {uploadPreview.method && (
+                    <div>
+                      <p className="muted">Method</p>
+                      <strong>{uploadPreview.method}</strong>
+                    </div>
+                  )}
+                </div>
+                <div className="result__text" role="textbox">
+                  <pre>{uploadPreview.text ?? uploadPreview.summary ?? 'Result ready for review.'}</pre>
+                </div>
+                <div className="result__actions">
+                  <button type="button" className="button button--primary">Download as .txt</button>
+                  <button type="button" className="button button--ghost">Download as .md</button>
+                </div>
+              </div>
+            ) : (
+              <div className="result__empty">
+                <p>No OCR results yet. Upload a file to see extracted content.</p>
+              </div>
+            )}
+
+            <div className="recent-documents">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Recent uploads</p>
+                  <h4>Validation queue</h4>
+                </div>
+              </div>
+              <ul className="document-list">
+                {recentDocuments.map((document) => (
+                  <li key={document.id}>
+                    <div>
+                      <span className="document-list__title">{document.title}</span>
+                      <span className="document-list__meta">
+                        {document.documentType}
+                        {document.module?.name ? ` • ${document.module.name}` : ''}
+                        {document.uploadedAt && ` • ${formatRelativeTime(document.uploadedAt)}`}
                       </span>
-                      {selectedModule.lastSynced && (
-                        <span className="module-detail__time">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
+                    </div>
+                    <div className="document-list__status">
+                      <span
+                        className={`pill pill--${
+                          document.status === 'Validated'
+                            ? 'success'
+                            : document.status === 'Pending Validation'
+                            ? 'warning'
+                            : 'info'
+                        }`}
+                      >
+                        {document.status}
+                      </span>
+                      {document.confidence !== null && (
+                        <span className="document-list__confidence">
+                          {`${Number(document.confidence).toFixed(1)}%`}
+                        </span>
                       )}
                     </div>
-                  </header>
-                  <p className="module-detail__description">{selectedModule.description}</p>
+                  </li>
+                ))}
+                {!recentDocuments.length && <li className="empty-state">No documents available yet.</li>}
+              </ul>
+            </div>
+          </article>
+        </section>
 
-                  {(selectedModule.metrics ?? []).length > 0 && (
-                    <div className="module-detail__metrics">
-                      {selectedModule.metrics.map((metric) => (
-                        <div key={metric.label} className="module-detail__metric">
-                          <span className="module-detail__metric-value">{metric.value}</span>
-                          <span className="module-detail__metric-label">{metric.label}</span>
-                          {metric.caption && (
-                            <span className="module-detail__metric-caption">{metric.caption}</span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+        <section className="module-detail card" aria-live="polite">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Live telemetry</p>
+              <h3>{selectedModule?.name ?? 'Select a module to inspect'}</h3>
+              <p className="muted">Peek into throughput, syncs, and recent activity.</p>
+            </div>
+            <div className="module-detail__status">
+              {selectedModule && (
+                <span className={`pill pill--${selectedModule.status === 'Operational' ? 'success' : 'warning'}`}>
+                  {selectedModule.status}
+                </span>
+              )}
+              {selectedModule?.lastSynced && (
+                <span className="muted">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
+              )}
+            </div>
+          </div>
 
-                  {(selectedModule.recentActivity ?? []).length > 0 && (
-                    <div className="module-detail__section">
-                      <h3>Recent activity</h3>
-                      <ul className="timeline">
-                        {selectedModule.recentActivity.map((activity, index) => (
-                          <li key={`${activity.time}-${index}`}>
-                            <span className="timeline__time">{formatRelativeTime(activity.time)}</span>
-                            <span className="timeline__text">{activity.detail}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+          {loadingModuleSlug && !selectedModule ? (
+            <div className="module-detail__empty">
+              <p>Loading module details…</p>
+            </div>
+          ) : selectedModule ? (
+            <>
+              <p className="module-detail__description">{selectedModule.description}</p>
 
-                  {(selectedModule.nextSteps ?? []).length > 0 && (
-                    <div className="module-detail__section">
-                      <h3>Next steps</h3>
-                      <ul className="checklist">
-                        {selectedModule.nextSteps.map((step) => (
-                          <li key={step}>{step}</li>
-                        ))}
-                      </ul>
+              {(selectedModule.metrics ?? []).length > 0 && (
+                <div className="module-detail__metrics">
+                  {selectedModule.metrics.map((metric) => (
+                    <div key={metric.label} className="module-detail__metric">
+                      <span className="module-detail__metric-value">{metric.value}</span>
+                      <span className="module-detail__metric-label">{metric.label}</span>
+                      {metric.caption && (
+                        <span className="module-detail__metric-caption">{metric.caption}</span>
+                      )}
                     </div>
-                  )}
-
-                  {(selectedModule.contacts ?? []).length > 0 && (
-                    <div className="module-detail__section">
-                      <h3>Points of contact</h3>
-                      <ul className="contact-list">
-                        {selectedModule.contacts.map((contact) => (
-                          <li key={contact.email ?? contact.name}>
-                            <span className="contact-list__name">{contact.name}</span>
-                            <span className="contact-list__role">{contact.role}</span>
-                            {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
-                            {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="module-detail__empty">
-                  <p>Select a module to inspect live telemetry.</p>
+                  ))}
                 </div>
               )}
-            </section>
-          </aside>
-        </main>
 
-        {toast && (
-          <div className="toast" role="status">
-            {toast}
+              {(selectedModule.recentActivity ?? []).length > 0 && (
+                <div className="module-detail__section">
+                  <h4>Recent activity</h4>
+                  <ul className="timeline">
+                    {selectedModule.recentActivity.map((activity, index) => (
+                      <li key={`${activity.time}-${index}`}>
+                        <span className="timeline__time">{formatRelativeTime(activity.time)}</span>
+                        <span className="timeline__text">{activity.detail}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(selectedModule.nextSteps ?? []).length > 0 && (
+                <div className="module-detail__section">
+                  <h4>Next steps</h4>
+                  <ul className="checklist">
+                    {selectedModule.nextSteps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {(selectedModule.contacts ?? []).length > 0 && (
+                <div className="module-detail__section">
+                  <h4>Points of contact</h4>
+                  <ul className="contact-list">
+                    {selectedModule.contacts.map((contact) => (
+                      <li key={contact.email ?? contact.name}>
+                        <span className="contact-list__name">{contact.name}</span>
+                        <span className="contact-list__role">{contact.role}</span>
+                        {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+                        {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="module-detail__empty">
+              <p>Select a module to inspect live telemetry.</p>
+            </div>
+          )}
+        </section>
+
+        <section className="audit card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Audit Logs</p>
+              <h3>Trace every document event</h3>
+              <p className="muted">Time, filename, module, status, and duration at a glance.</p>
+            </div>
           </div>
-        )}
-      </div>
+          <div className="audit__table" role="table">
+            <div className="audit__row audit__row--header" role="row">
+              <span role="columnheader">Time</span>
+              <span role="columnheader">Filename</span>
+              <span role="columnheader">Module</span>
+              <span role="columnheader">Status</span>
+              <span role="columnheader">Duration</span>
+            </div>
+            {(auditLogs ?? []).map((log, index) => (
+              <div key={log.id ?? index} className="audit__row" role="row">
+                <span role="cell">{formatRelativeTime(log.time)}</span>
+                <span role="cell">{log.filename}</span>
+                <span role="cell">{log.module}</span>
+                <span role="cell">
+                  <span className={`pill pill--${log.status === 'success' ? 'success' : 'danger'}`}>
+                    {log.status}
+                  </span>
+                </span>
+                <span role="cell">{log.duration}</span>
+              </div>
+            ))}
+            {!auditLogs.length && (
+              <div className="audit__row audit__row--empty" role="row">
+                <span role="cell">No audit logs yet.</span>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
 
 export default App;
-
