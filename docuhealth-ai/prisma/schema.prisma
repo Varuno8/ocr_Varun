@@ -7,34 +7,119 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model OCRJob {
-  id          String   @id @default(cuid())
-  filename    String
-  module      String
-  method      String
-  status      String
-  error       String?
-  elapsedMs   Int
-  sizeBytes   Int?
-  mimeType    String?
-  textSnippet String?
-  createdAt   DateTime @default(now())
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
 }
 
-model DailyMetric {
-  id          Int      @id @default(autoincrement())
-  date        DateTime @unique
-  scanned     Int      @default(0)
-  pending     Int      @default(0)
-  accuracy    Float    @default(95.0)
-  syncedToHis Boolean  @default(true)
-  updatedAt   DateTime @updatedAt
+enum ProcessingStatus {
+  QUEUED
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum AuditStatus {
+  SUCCESS
+  WARNING
+  ERROR
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String           @id @default(cuid())
+  email          String           @unique
+  name           String?
+  role           String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  documents      Document[]
+  auditLogs      AuditLog[]
+  processingJobs ProcessingJob[]
+}
+
+model Module {
+  id               String           @id @default(cuid())
+  key              String           @unique
+  name             String
+  description      String
+  icon             String?
+  isActive         Boolean          @default(true)
+  lastProcessedAt  DateTime?
+  confidence       Float?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  documents        Document[]
+  processingJobs   ProcessingJob[]
+}
+
+model Document {
+  id               String           @id @default(cuid())
+  title            String
+  filename         String
+  mimeType         String
+  sizeBytes        Int?
+  method           String?
+  status           DocumentStatus   @default(PENDING)
+  processingTimeMs Int?
+  textSnippet      String?
+  extractedText    String?
+  moduleId         String?
+  userId           String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  module           Module?          @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  user             User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  processingJobs   ProcessingJob[]
+  auditLogs        AuditLog[]
+
+  @@index([moduleId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ProcessingJob {
+  id          String            @id @default(cuid())
+  documentId  String
+  moduleId    String?
+  userId      String?
+  status      ProcessingStatus  @default(QUEUED)
+  error       String?
+  provider    String?
+  method      String?
+  startedAt   DateTime          @default(now())
+  completedAt DateTime?
+  durationMs  Int?
+  createdAt   DateTime          @default(now())
+  document    Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  module      Module?           @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  user        User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([documentId])
+  @@index([moduleId])
+  @@index([userId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model AuditLog {
+  id         String       @id @default(cuid())
+  userId     String?
+  documentId String?
+  action     String
+  entityType String
+  entityId   String?
+  status     AuditStatus  @default(SUCCESS)
+  durationMs Int?
+  metadata   Json?
+  createdAt  DateTime     @default(now())
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  document   Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([documentId])
+  @@index([status])
+  @@index([createdAt])
 }
