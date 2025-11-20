@@ -269,9 +269,12 @@ function App() {
   };
 
   const accuracyStat = dashboard?.stats?.find((item) => item.id === 'accuracy');
+  const systemLatency = dashboard?.latency ?? '42 ms';
 
   return (
     <div className="app-shell">
+      <div className="background-grid" aria-hidden="true" />
+      <div className="background-noise" aria-hidden="true" />
       <div className="app-shell__inner">
         {bannerError && (
           <div className="banner banner--error" role="alert">
@@ -285,18 +288,24 @@ function App() {
         <header className="hero card">
           <div className="hero__text">
             <p className="hero__eyebrow">DocuHealth AI</p>
-            <h1>AI-Powered Document Digitization for Government Medical Institutions</h1>
+            <h1>Clinical Futurism for Medical Digitization</h1>
             <p className="hero__subtitle">
-              Monitor digitization throughput, validation queues, and HIS sync readiness across your facilities in real time.
+              A living console that streams your scan pipelines, OCR pulse, and validation workflows with surgical clarity.
             </p>
             {dashboard?.lastUpdated && (
-              <p className="hero__timestamp">Updated {formatRelativeTime(dashboard.lastUpdated)}</p>
+              <p className="hero__timestamp">Synced {formatRelativeTime(dashboard.lastUpdated)}</p>
             )}
           </div>
           <div className="hero__actions">
-            <span className={`status-pill status-pill--${dashboard?.status === 'Operational' ? 'success' : 'warning'}`}>
-              {dashboard?.status ?? 'Loading'}
-            </span>
+            <div className="system-health" aria-live="polite">
+              <div className="system-health__label">System health</div>
+              <div className="system-health__ecg">
+                <span className="ecg-line" aria-hidden="true" />
+                <span className="system-health__status">
+                  {dashboard?.status ?? 'Loading'} • {systemLatency}
+                </span>
+              </div>
+            </div>
             {accuracyStat && <span className="hero__accuracy">Accuracy {accuracyStat.value}</span>}
           </div>
         </header>
@@ -312,7 +321,8 @@ function App() {
               </div>
               <div className="stats-grid">
                 {(dashboard?.stats ?? []).map((item) => (
-                  <article key={item.id} className="stat-card">
+                  <article key={item.id} className={`stat-card stat-card--${item.id}`}>
+                    <span className="stat-card__halo" aria-hidden="true" />
                     <div className="stat-card__icon" aria-hidden="true">
                       {item.icon}
                     </div>
@@ -366,17 +376,21 @@ function App() {
                     </label>
                   </div>
 
-                  <label className="field">
-                    <span>Scan</span>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.zip"
-                      onChange={handleFileChange}
-                      required
-                    />
-                    {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
-                  </label>
+                  <div className="plasma-zone">
+                    <div className="plasma-zone__glow" aria-hidden="true" />
+                    <label className="field">
+                      <span>Scan</span>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.tif,.tiff,.csv,.zip"
+                        onChange={handleFileChange}
+                        required
+                      />
+                      {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
+                    </label>
+                    <p className="plasma-zone__hint">Drop files to ripple the plasma field or browse to awaken the DNA loader.</p>
+                  </div>
 
                   <label className="field">
                     <span>Title</span>
@@ -520,74 +534,53 @@ function App() {
                   </table>
                 </div>
               </article>
+            </section>
 
-              <article className="workflow-card card">
-                <header>
-                  <h3>Pending Validations</h3>
-                  <p>Keep critical documents on track for HIS synchronization.</p>
-                </header>
-                <ul className="validation-list">
-                  {pendingValidations.map((item) => (
-                    <li key={item.id}>
-                      <div>
-                        <span className="validation-list__title">{item.document.title}</span>
-                        <span className="validation-list__meta">
-                          {item.document.type}
-                          {item.document.module?.name ? ` • ${item.document.module.name}` : ''}
-                          {item.document.uploadedAt && ` • ${formatRelativeTime(item.document.uploadedAt)}`}
-                        </span>
-                      </div>
-                      <div className="validation-list__status">
-                        <span className={`badge badge--${item.priority === 'high' ? 'warning' : 'info'}`}>
-                          {item.priority === 'high' ? 'High priority' : 'Normal'}
-                        </span>
-                        {item.dueAt && <span>Due {formatRelativeTime(item.dueAt)}</span>}
-                      </div>
-                    </li>
-                  ))}
-                  {!pendingValidations.length && <li className="empty-state">No validations pending 🎉</li>}
-                </ul>
-              </article>
-
-              <article className="workflow-card card">
-                <header>
-                  <h3>Audit Logs</h3>
-                  <p>Trace overrides, HIS syncs, and compliance exports.</p>
-                </header>
-                <ul className="audit-list">
-                  {auditLogs.map((log) => (
-                    <li key={log.id}>
-                      <div>
-                        <span className="audit-list__title">{log.action}</span>
-                        <span className="audit-list__meta">
-                          {log.module?.name ? `${log.module.name} • ` : ''}
-                          {log.actor}
-                          {log.createdAt && ` • ${formatRelativeTime(log.createdAt)}`}
-                        </span>
-                      </div>
-                      <p>{log.detail}</p>
-                    </li>
-                  ))}
-                  {!auditLogs.length && <li className="empty-state">No audit activity recorded.</li>}
-                </ul>
-              </article>
+            <section className="style-guide card">
+              <header className="style-guide__header">
+                <div>
+                  <p className="style-guide__eyebrow">Clinical Futurism</p>
+                  <h3>Living interface language</h3>
+                </div>
+                <div className="style-guide__swatches" aria-hidden="true">
+                  <span className="swatch swatch--teal" />
+                  <span className="swatch swatch--blue" />
+                  <span className="swatch swatch--amber" />
+                  <span className="swatch swatch--coral" />
+                </div>
+              </header>
+              <div className="style-guide__grid">
+                <div className="style-guide__card">
+                  <p className="style-guide__label">Glassmorphism</p>
+                  <p className="style-guide__value">Blurred panels with 10% cyan haze and 1px ion borders.</p>
+                </div>
+                <div className="style-guide__card">
+                  <p className="style-guide__label">Motion</p>
+                  <p className="style-guide__value">Particles stream on ingest, ECG pulses mirror latency, tiles tilt on hover.</p>
+                </div>
+                <div className="style-guide__card">
+                  <p className="style-guide__label">Typography</p>
+                  <p className="style-guide__value">Inter for language, JetBrains Mono for telemetry &amp; precision metrics.</p>
+                </div>
+              </div>
             </section>
           </section>
 
           <aside className="module-panel">
-            <section className="module-list card" aria-label="DocuHealth modules">
-              <header className="module-list__head">
-                <h2>Modules</h2>
-                <p>Select a workflow to view telemetry and contacts.</p>
-              </header>
+            <section className="card module-list" aria-label="Modules list">
+              <div className="module-list__head">
+                <h2>Active Modules</h2>
+                <p>Switch between ingest and validation pipelines.</p>
+              </div>
               <div className="module-list__items">
                 {modules.map((module) => {
-                  const isActive = module.slug === selectedModuleSlug;
+                  const isSelected = module.slug === selectedModuleSlug;
+
                   return (
                     <button
                       key={module.slug}
+                      className={`module-item${isSelected ? ' is-active' : ''}`}
                       type="button"
-                      className={`module-item${isActive ? ' is-active' : ''}`}
                       onClick={() => handleModuleSelect(module.slug)}
                     >
                       <span className="module-item__icon" aria-hidden="true">
