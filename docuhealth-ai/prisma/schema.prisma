@@ -1,0 +1,40 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model OCRJob {
+  id          String   @id @default(cuid())
+  filename    String
+  module      String
+  method      String
+  status      String
+  error       String?
+  elapsedMs   Int
+  sizeBytes   Int?
+  mimeType    String?
+  textSnippet String?
+  createdAt   DateTime @default(now())
+}
+
+model DailyMetric {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique
+  scanned     Int      @default(0)
+  pending     Int      @default(0)
+  accuracy    Float    @default(95.0)
+  syncedToHis Boolean  @default(true)
+  updatedAt   DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
