@@ -10,6 +10,14 @@ const initialUploadState = {
   uploadedBy: '',
 };
 
+const gradientPalette = [
+  'linear-gradient(135deg, #6366F1, #EC4899)',
+  'linear-gradient(135deg, #22D3EE, #6366F1)',
+  'linear-gradient(135deg, #F472B6, #60A5FA)',
+  'linear-gradient(135deg, #84CC16, #22D3EE)',
+  'linear-gradient(135deg, #A78BFA, #EC4899)',
+];
+
 const formatRelativeTime = (value) => {
   if (!value) return '';
   const date = new Date(value);
@@ -273,9 +281,8 @@ function App() {
   const selectedModuleSummary = modules.find((item) => item.slug === selectedModuleSlug);
 
   return (
-    <div className="app-shell">
-      <div className="bg-haze" aria-hidden="true" />
-      <div className="bg-glow" aria-hidden="true" />
+    <div className="canvas">
+      <div className="backdrop">{/* background haze */}</div>
 
       {bannerError && (
         <div className="banner banner--error" role="alert">
@@ -286,62 +293,63 @@ function App() {
         </div>
       )}
 
-      <header className="navbar">
-        <div className="navbar__brand">
-          <div className="orb" aria-hidden="true" />
+      <header className="nav">
+        <div className="nav__brand">
+          <div className="logo">DocuHealth</div>
           <div>
             <p className="eyebrow">DocuHealth AI</p>
-            <h1>AI-powered medical intelligence</h1>
+            <h1>Vibrant intelligence for every clinical document</h1>
           </div>
         </div>
-        <div className="navbar__status">
-          <span className="pill pill--success">System online</span>
+        <div className="nav__status">
+          <span className="pill pill--success">Live</span>
           <span className="pill pill--ghost">Latency {systemLatency}</span>
         </div>
       </header>
 
-      <main className="page-grid">
+      <main className="layout">
         <section className="hero">
-          <div className="hero__copy">
-            <div className="badge">Precision-grade document cognition</div>
+          <div className="hero__content">
+            <p className="badge">Premium HealthTech — powered by Google Document AI</p>
             <h2>
-              Fluid oversight for every <span>scan</span>, <span>validation</span>, and <span>handoff</span>.
+              A colorful cockpit for <span>DocuHealth</span> automations.
             </h2>
-            <p>
-              Whisper-quiet automation meets clinical control. Monitor throughput, anomalies, and OCR accuracy
-              from a calming cockpit inspired by Apple Health and Linear.
+            <p className="lede">
+              Track OCR accuracy, orchestrate uploads, and monitor validation with a playful yet premium
+              dashboard. Crafted with neon gradients, glass layers, and lively micro-interactions.
             </p>
             <div className="hero__actions">
               <button type="button" className="button button--primary">
-                Launch console
+                Launch DocuHealth
               </button>
               <button type="button" className="button button--ghost">
-                View playbooks
+                View automation flows
               </button>
             </div>
             {dashboard?.lastUpdated && (
-              <div className="hero__meta">Updated {formatRelativeTime(dashboard.lastUpdated)}</div>
+              <div className="hero__meta">Synced {formatRelativeTime(dashboard.lastUpdated)}</div>
             )}
           </div>
           <div className="hero__visual">
-            <div className="glass-panel">
-              <div className="ecg" aria-hidden="true">
-                <div className="ecg__grid" />
-                <div className="ecg__line" />
+            <div className="halo" aria-hidden="true" />
+            <div className="glass board">
+              <div className="board__wave" aria-hidden="true">
+                <div className="wave" />
+                <div className="wave wave--delay" />
               </div>
-              <div className="metric-grid">
+              <div className="metrics">
                 {(dashboard?.stats ?? []).slice(0, 3).map((stat) => (
-                  <div key={stat.id} className="metric-card">
+                  <div key={stat.id} className="metric">
                     <p>{stat.label}</p>
                     <strong>{stat.value}</strong>
                     {stat.trend && <small>{stat.trend}</small>}
                   </div>
                 ))}
                 {accuracyStat && (
-                  <div className="metric-card metric-card--accent">
+                  <div className="metric metric--accent">
                     <p>Avg OCR Accuracy</p>
                     <strong>{accuracyStat.value}</strong>
-                    <small>Google Document AI</small>
+                    <small>Real-time quality</small>
                   </div>
                 )}
               </div>
@@ -349,14 +357,18 @@ function App() {
           </div>
         </section>
 
-        <section className="stat-grid">
-          {(dashboard?.stats ?? []).map((item) => (
-            <article key={item.id} className="stat-card glass">
-              <div className="stat-card__header">
-                <span className="icon" aria-hidden="true">
+        <section className="grid stats">
+          {(dashboard?.stats ?? []).map((item, index) => (
+            <article
+              key={item.id}
+              className="stat-card glass"
+              style={{ backgroundImage: gradientPalette[index % gradientPalette.length] }}
+            >
+              <div className="stat-card__top">
+                <span className="stat-card__icon" aria-hidden="true">
                   {item.icon}
                 </span>
-                <span className="stat-card__label">{item.label}</span>
+                <span className="pill pill--light">{item.label}</span>
               </div>
               <div className="stat-card__value">{item.value}</div>
               {item.trend && <div className="stat-card__trend">{item.trend}</div>}
@@ -364,15 +376,15 @@ function App() {
           ))}
         </section>
 
-        <section className="modules glass">
-          <div className="section-heading">
+        <section className="panel modules glass">
+          <div className="panel__header">
             <div>
-              <p className="eyebrow">Modules</p>
-              <h3>Smart digitization lanes</h3>
-              <p className="muted">Route uploads, watch telemetry, and keep validators focused.</p>
+              <p className="eyebrow">Automation modules</p>
+              <h3>Colorful lanes for DocuHealth</h3>
+              <p className="muted">Tap a tile to inspect its live telemetry and validation steps.</p>
             </div>
             {selectedModuleSummary && (
-              <div className="section-heading__meta">
+              <div className="panel__meta">
                 <span className="pill pill--ghost">{selectedModuleSummary.status}</span>
                 {selectedModuleSummary.lastRun && (
                   <small>Last run {formatRelativeTime(selectedModuleSummary.lastRun)}</small>
@@ -380,25 +392,29 @@ function App() {
               </div>
             )}
           </div>
-          <div className="modules__grid">
-            {modules.map((module) => {
+
+          <div className="module-grid">
+            {modules.map((module, index) => {
               const isActive = module.slug === selectedModuleSlug;
               return (
                 <button
                   key={module.slug}
                   type="button"
-                  className={`module-tile glass ${isActive ? 'is-selected' : ''}`}
+                  className={`module-card ${isActive ? 'is-active' : ''}`}
+                  style={{ backgroundImage: gradientPalette[index % gradientPalette.length] }}
                   onClick={() => handleModuleSelect(module.slug)}
                 >
-                  <div className="module-tile__icon" aria-hidden="true">
+                  <div className="module-card__icon" aria-hidden="true">
                     {module.icon}
                   </div>
-                  <div className="module-tile__body">
-                    <div className="module-tile__title">{module.name}</div>
-                    <div className="module-tile__subtitle">{module.summary}</div>
+                  <div className="module-card__body">
+                    <div className="module-card__title">{module.name}</div>
+                    <p className="module-card__subtitle">{module.summary}</p>
                   </div>
-                  <div className="module-tile__status">
-                    <span className={`pill pill--${module.status === 'Operational' ? 'success' : 'warning'}`}>
+                  <div className="module-card__status">
+                    <span
+                      className={`pill pill--${module.status === 'Operational' ? 'success' : 'warning'}`}
+                    >
                       {module.status}
                     </span>
                     {module.lastRun && <small>{formatRelativeTime(module.lastRun)}</small>}
@@ -406,23 +422,23 @@ function App() {
                 </button>
               );
             })}
-            {!modules.length && <p className="empty-state">No modules configured.</p>}
+            {!modules.length && <p className="empty">No modules configured.</p>}
           </div>
         </section>
 
         <section className="workspace">
-          <article className="panel upload glass">
-            <div className="section-heading">
+          <article className="panel uploader glass">
+            <div className="panel__header">
               <div>
                 <p className="eyebrow">Upload system</p>
-                <h3>Drop, process, and stream OCR</h3>
-                <p className="muted">Animated border, teal glow, and live progress tracking.</p>
+                <h3>Neon-grade document ingress</h3>
+                <p className="muted">Pastel gradients, dotted borders, and lively progress rings.</p>
               </div>
-              <span className="pill pill--ghost">Encrypted transit</span>
+              <span className="pill pill--ghost">Secure transit</span>
             </div>
 
-            <form className="upload__form" onSubmit={handleUploadSubmit}>
-              <div className="form-grid">
+            <form className="form" onSubmit={handleUploadSubmit}>
+              <div className="form__row">
                 <label className="field">
                   <span>Module</span>
                   <select
@@ -456,8 +472,8 @@ function App() {
               </div>
 
               <div className={`dropzone ${uploading ? 'is-uploading' : ''}`}>
-                <div className="dropzone__content">
-                  <p className="dropzone__title">Drag & drop files here</p>
+                <div className="dropzone__shell">
+                  <p className="dropzone__title">Drag & drop files</p>
                   <p className="dropzone__subtitle">PDF, JPG, PNG, WEBP up to 200MB</p>
                   <div className="dropzone__actions">
                     <label className="button button--primary" htmlFor="file-input">
@@ -480,19 +496,19 @@ function App() {
                     </button>
                   </div>
                   {uploadFile && <small className="field__hint">{uploadFile.name}</small>}
-                  <span className="pill pill--ghost">Powered by Google Document AI</span>
+                  <span className="pill pill--light">Google Document AI</span>
                 </div>
                 {uploading && (
                   <div className="dropzone__overlay" role="status">
-                    <div className="progress-ring">
-                      <div className="progress-ring__segment" />
+                    <div className="progress">
+                      <div className="progress__ring" />
                     </div>
                     <p>Processing…</p>
                   </div>
                 )}
               </div>
 
-              <div className="form-grid form-grid--stacked">
+              <div className="form__row form__row--stacked">
                 <label className="field">
                   <span>Title</span>
                   <input
@@ -523,154 +539,149 @@ function App() {
                 />
               </label>
 
-              <div className="upload__actions">
+              <div className="form__actions">
                 <button type="submit" className="button button--primary" disabled={uploading}>
-                  {uploading ? 'Processing…' : 'Run OCR'}
+                  {uploading ? 'Uploading…' : 'Upload document'}
                 </button>
-                <span className="muted">Files stay private and encrypted in transit.</span>
+                {uploadPreview && (
+                  <div className="chip">Latest: {uploadPreview.title ?? uploadPreview.filename}</div>
+                )}
               </div>
             </form>
           </article>
 
-          <article className="panel results glass" aria-live="polite">
-            <div className="section-heading">
+          <article className="panel details glass">
+            <div className="panel__header">
               <div>
-                <p className="eyebrow">Output viewer</p>
-                <h3>{uploadPreview ? uploadPreview.title ?? 'Processed file' : 'Awaiting upload'}</h3>
-                <p className="muted">Review extracted text and export into HIS workflows.</p>
+                <p className="eyebrow">Module details</p>
+                <h3>Live telemetry & insights</h3>
               </div>
-              {uploadPreview?.method && <span className="pill pill--ghost">{uploadPreview.method}</span>}
+              {selectedModule?.lastSynced && (
+                <span className="muted">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
+              )}
             </div>
 
-            {uploadPreview ? (
-              <div className="result__body">
-                <div className="result__meta">
-                  {uploadPreview.fileName && (
-                    <div>
-                      <span className="muted">Filename</span>
-                      <p>{uploadPreview.fileName}</p>
-                    </div>
-                  )}
-                  {uploadPreview.module && (
-                    <div>
-                      <span className="muted">Module</span>
-                      <p>{uploadPreview.module}</p>
-                    </div>
-                  )}
-                  {uploadPreview.duration && (
-                    <div>
-                      <span className="muted">Duration</span>
-                      <p>{uploadPreview.duration}</p>
-                    </div>
-                  )}
-                </div>
-                <div className="result__text">
-                  <pre>{uploadPreview.content ?? uploadPreview.text ?? 'Content ready.'}</pre>
-                </div>
-                <div className="result__actions">
-                  <button type="button" className="button button--ghost">
-                    Copy text
-                  </button>
-                  <button type="button" className="button button--primary">
-                    Export to HIS
-                  </button>
-                </div>
+            {loadingModuleSlug && !selectedModule ? (
+              <div className="empty">Loading module details…</div>
+            ) : selectedModule ? (
+              <div className="detail-grid">
+                <p className="muted">{selectedModule.description}</p>
+
+                {(selectedModule.metrics ?? []).length > 0 && (
+                  <div className="pill-grid">
+                    {selectedModule.metrics.map((metric) => (
+                      <div key={metric.label} className="pill-tile">
+                        <span className="pill-tile__value">{metric.value}</span>
+                        <span className="pill-tile__label">{metric.label}</span>
+                        {metric.caption && <span className="pill-tile__caption">{metric.caption}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {(selectedModule.recentActivity ?? []).length > 0 && (
+                  <div className="section-block">
+                    <div className="section-block__title">Recent activity</div>
+                    <ul className="timeline">
+                      {selectedModule.recentActivity.map((activity, index) => (
+                        <li key={`${activity.time}-${index}`}>
+                          <span className="timeline__time">{formatRelativeTime(activity.time)}</span>
+                          <span className="timeline__text">{activity.detail}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(selectedModule.nextSteps ?? []).length > 0 && (
+                  <div className="section-block">
+                    <div className="section-block__title">Next steps</div>
+                    <ul className="checklist">
+                      {selectedModule.nextSteps.map((step) => (
+                        <li key={step}>{step}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {(selectedModule.contacts ?? []).length > 0 && (
+                  <div className="section-block">
+                    <div className="section-block__title">Points of contact</div>
+                    <ul className="contacts">
+                      {selectedModule.contacts.map((contact) => (
+                        <li key={contact.email ?? contact.name}>
+                          <span className="contacts__name">{contact.name}</span>
+                          <span className="contacts__role">{contact.role}</span>
+                          {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+                          {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             ) : (
-              <div className="result__empty">
-                <p>Upload a scan to preview OCR output with a calming glass effect.</p>
-              </div>
+              <div className="empty">Select a module to inspect live telemetry.</div>
             )}
           </article>
         </section>
 
-        <section className="panel module-detail glass">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Live telemetry</p>
-              <h3>{selectedModuleSummary ? selectedModuleSummary.name : 'Module details'}</h3>
-              <p className="muted">Fine-grain vitals, recent activity, and next actions.</p>
-            </div>
-            {selectedModule?.lastSynced && (
-              <span className="muted">Last sync {formatRelativeTime(selectedModule.lastSynced)}</span>
-            )}
+        <section className="panel grid glass insight-grid">
+          <div>
+            <p className="eyebrow">Pending validations</p>
+            <h3>Keep validators focused</h3>
+            <ul className="tile-list">
+              {(pendingValidations ?? []).map((item) => (
+                <li key={item.id} className="tile">
+                  <div>
+                    <p className="tile__title">{item.title}</p>
+                    <p className="tile__meta">{item.module}</p>
+                  </div>
+                  <span className="pill pill--warning">Pending</span>
+                </li>
+              ))}
+              {!pendingValidations.length && <p className="empty">All validations are clear.</p>}
+            </ul>
           </div>
-
-          {loadingModuleSlug && !selectedModule ? (
-            <div className="module-detail__empty">
-              <p>Loading module details…</p>
-            </div>
-          ) : selectedModule ? (
-            <>
-              <p className="module-detail__description">{selectedModule.description}</p>
-
-              {(selectedModule.metrics ?? []).length > 0 && (
-                <div className="module-detail__metrics">
-                  {selectedModule.metrics.map((metric) => (
-                    <div key={metric.label} className="module-detail__metric">
-                      <span className="module-detail__metric-value">{metric.value}</span>
-                      <span className="module-detail__metric-label">{metric.label}</span>
-                      {metric.caption && (
-                        <span className="module-detail__metric-caption">{metric.caption}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {(selectedModule.recentActivity ?? []).length > 0 && (
-                <div className="module-detail__section">
-                  <h4>Recent activity</h4>
-                  <ul className="timeline">
-                    {selectedModule.recentActivity.map((activity, index) => (
-                      <li key={`${activity.time}-${index}`}>
-                        <span className="timeline__time">{formatRelativeTime(activity.time)}</span>
-                        <span className="timeline__text">{activity.detail}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {(selectedModule.nextSteps ?? []).length > 0 && (
-                <div className="module-detail__section">
-                  <h4>Next steps</h4>
-                  <ul className="checklist">
-                    {selectedModule.nextSteps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {(selectedModule.contacts ?? []).length > 0 && (
-                <div className="module-detail__section">
-                  <h4>Points of contact</h4>
-                  <ul className="contact-list">
-                    {selectedModule.contacts.map((contact) => (
-                      <li key={contact.email ?? contact.name}>
-                        <span className="contact-list__name">{contact.name}</span>
-                        <span className="contact-list__role">{contact.role}</span>
-                        {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
-                        {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="module-detail__empty">
-              <p>Select a module to inspect live telemetry.</p>
-            </div>
-          )}
+          <div>
+            <p className="eyebrow">Recent documents</p>
+            <h3>Freshly ingested</h3>
+            <ul className="tile-list">
+              {(recentDocuments ?? []).map((doc) => (
+                <li key={doc.id} className="tile">
+                  <div>
+                    <p className="tile__title">{doc.title}</p>
+                    <p className="tile__meta">{doc.module}</p>
+                  </div>
+                  <span className="pill pill--success">{doc.status}</span>
+                </li>
+              ))}
+              {!recentDocuments.length && <p className="empty">No recent documents yet.</p>}
+            </ul>
+          </div>
+          <div>
+            <p className="eyebrow">Medicine stock</p>
+            <h3>Inventory pulse</h3>
+            <ul className="tile-list">
+              {(medicineStock ?? []).map((item) => (
+                <li key={item.name} className="tile">
+                  <div>
+                    <p className="tile__title">{item.name}</p>
+                    <p className="tile__meta">{item.category}</p>
+                  </div>
+                  <span className="pill pill--light">{item.status}</span>
+                </li>
+              ))}
+              {!medicineStock.length && <p className="empty">Inventory data unavailable.</p>}
+            </ul>
+          </div>
         </section>
 
         <section className="panel audit glass">
-          <div className="section-heading">
+          <div className="panel__header">
             <div>
               <p className="eyebrow">Audit logs</p>
-              <h3>Trace every document event</h3>
+              <h3>Color-coded traceability</h3>
               <p className="muted">Time, filename, module, status, and duration at a glance.</p>
             </div>
           </div>
@@ -688,7 +699,15 @@ function App() {
                 <span role="cell">{log.filename}</span>
                 <span role="cell">{log.module}</span>
                 <span role="cell">
-                  <span className={`pill pill--${log.status === 'success' ? 'success' : 'danger'}`}>
+                  <span
+                    className={`pill pill--${
+                      log.status === 'success'
+                        ? 'success'
+                        : log.status === 'pending'
+                          ? 'warning'
+                          : 'danger'
+                    }`}
+                  >
                     {log.status}
                   </span>
                 </span>
