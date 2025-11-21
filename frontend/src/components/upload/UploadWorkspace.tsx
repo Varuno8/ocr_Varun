@@ -1,39 +1,33 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { CloudUpload, Loader2 } from 'lucide-react';
-import { z } from 'zod';
+import { FormEvent, useState } from 'react';
+import { Loader2, UploadCloud } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select } from '../ui/select';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { useUpload } from '../../features/ocr/useUpload';
-import { toast } from 'sonner';
+import { toast } from '../../lib/toast';
 
-const formSchema = z.object({
-  moduleId: z.string().optional(),
-  title: z.string().optional(),
-  uploadedBy: z.string().optional(),
-  notes: z.string().optional(),
-});
+const initialForm = {
+  moduleId: '',
+  title: '',
+  uploadedBy: '',
+  notes: '',
+};
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = typeof initialForm;
 
 export function UploadWorkspace({ onResult }: { onResult: (data: any) => void }) {
   const [file, setFile] = useState<File | null>(null);
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>({ resolver: zodResolver(formSchema) });
+  const [values, setValues] = useState<FormValues>(initialForm);
 
   const upload = useUpload((data) => {
     onResult(data);
     toast.success('OCR completed');
   });
 
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     if (!file) {
       toast.error('Please add a file to process');
       return;
@@ -43,14 +37,19 @@ export function UploadWorkspace({ onResult }: { onResult: (data: any) => void })
     Object.entries(values).forEach(([key, val]) => {
       if (val) formData.append(key, val);
     });
-    upload.mutate(formData);
+    try {
+      await upload.mutate(formData);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Upload failed';
+      toast.error(message);
+    }
   };
 
   return (
     <Card className="hover-lift">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-xl">
-          <CloudUpload className="h-5 w-5 text-primary" /> Upload Workspace
+          <UploadCloud className="h-5 w-5 text-primary" /> Upload Workspace
         </CardTitle>
         <p className="text-sm text-muted">Drag & drop documents or browse files. Supported: PDF, JPEG, PNG.</p>
       </CardHeader>
@@ -64,7 +63,7 @@ export function UploadWorkspace({ onResult }: { onResult: (data: any) => void })
             if (dropped) setFile(dropped);
           }}
         >
-          <CloudUpload className="h-10 w-10 text-primary" />
+          <UploadCloud className="h-10 w-10 text-primary" />
           <div className="text-lg font-semibold text-text">Drop files here or browse</div>
           <p className="text-sm text-muted">HIPAA-ready secure upload · Max 25MB · PDF/JPEG/PNG</p>
           <label className="mt-2 cursor-pointer rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow">
@@ -79,30 +78,46 @@ export function UploadWorkspace({ onResult }: { onResult: (data: any) => void })
           {file && <div className="text-sm text-text">Selected: {file.name}</div>}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
+        <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-text">Module</label>
-            <Select {...register('moduleId')} defaultValue="">
+            <Select
+              value={values.moduleId}
+              onChange={(e) => setValues((prev) => ({ ...prev, moduleId: e.target.value }))}
+              defaultValue=""
+            >
               <option value="">Select module</option>
-              <option value="">Document Scanner</option>
-              <option value="">Medicine Stock Parser</option>
-              <option value="">OPD/IPD Forms</option>
-              <option value="">Lab Reports</option>
-              <option value="">General Upload</option>
+              <option value="Document Scanner">Document Scanner</option>
+              <option value="Medicine Stock Parser">Medicine Stock Parser</option>
+              <option value="OPD/IPD Forms">OPD/IPD Forms</option>
+              <option value="Lab Reports">Lab Reports</option>
+              <option value="General Upload">General Upload</option>
             </Select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-text">Title</label>
-            <Input placeholder="e.g., OPD intake - 12 Sep" {...register('title')} />
+            <Input
+              placeholder="e.g., OPD intake - 12 Sep"
+              value={values.title}
+              onChange={(e) => setValues((prev) => ({ ...prev, title: e.target.value }))}
+            />
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-text">Uploaded by</label>
-            <Input placeholder="Dr. A.K. Sharma" {...register('uploadedBy')} />
-            {errors.uploadedBy && <p className="text-xs text-error">{errors.uploadedBy.message}</p>}
+            <Input
+              placeholder="Dr. A.K. Sharma"
+              value={values.uploadedBy}
+              onChange={(e) => setValues((prev) => ({ ...prev, uploadedBy: e.target.value }))}
+            />
           </div>
           <div className="space-y-2 md:col-span-2">
             <label className="text-sm font-medium text-text">Operator notes</label>
-            <Textarea rows={3} placeholder="Any specifics for this run" {...register('notes')} />
+            <Textarea
+              rows={3}
+              placeholder="Any specifics for this run"
+              value={values.notes}
+              onChange={(e) => setValues((prev) => ({ ...prev, notes: e.target.value }))}
+            />
           </div>
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" disabled={upload.isPending} className="flex items-center gap-2 px-6">

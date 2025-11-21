@@ -5,14 +5,14 @@ import { UploadWorkspace } from './components/upload/UploadWorkspace';
 import { ResultViewer } from './components/results/ResultViewer';
 import { AuditLogTable } from './components/logs/AuditLogTable';
 import { useState } from 'react';
-import { Toaster } from 'sonner';
+import { ToastContainer } from './lib/toast';
 
 export default function App() {
   const [lastResult, setLastResult] = useState<any>();
 
   return (
     <Layout>
-      <Toaster position="top-right" richColors />
+      <ToastContainer />
       <section className="space-y-3">
         <div className="flex items-center gap-3">
           <div className="gradient-card rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg">Powered by Google Document AI</div>
