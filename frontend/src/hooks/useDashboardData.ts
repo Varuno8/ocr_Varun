@@ -34,13 +34,16 @@ function useApiQuery<T>(fetcher: () => Promise<T>): QueryResult<T> {
 }
 
 export function useStats() {
-  return useApiQuery(() => apiClient.get('/stats'));
+  const fetchStats = useCallback(() => apiClient.get('/stats'), []);
+  return useApiQuery(fetchStats);
 }
 
 export function useModules() {
-  return useApiQuery(() => apiClient.get('/modules'));
+  const fetchModules = useCallback(() => apiClient.get('/modules'), []);
+  return useApiQuery(fetchModules);
 }
 
 export function useLogs(limit = 50) {
-  return useApiQuery(() => apiClient.get(`/logs?limit=${limit}`));
+  const fetchLogs = useCallback(() => apiClient.get(`/logs?limit=${limit}`), [limit]);
+  return useApiQuery(fetchLogs);
 }
