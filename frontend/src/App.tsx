@@ -14,10 +14,7 @@ export default function App() {
     <Layout>
       <ToastContainer />
       <section className="space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="gradient-card rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-lg">Powered by Google Document AI</div>
-          <div className="text-3xl font-bold text-text">Medical Document Processing Dashboard</div>
-        </div>
+        <div className="text-3xl font-bold text-text">Medical Document Processing Dashboard</div>
         <p className="max-w-3xl text-muted">
           Modern, secure OCR pipeline for hospitals and public health systems. Upload, digitize, and audit every medical document with realtime insights.
         </p>

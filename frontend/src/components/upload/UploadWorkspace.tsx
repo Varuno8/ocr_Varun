@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react';
-import { Loader2, UploadCloud } from 'lucide-react';
+import { Loader2, ScanText, UploadCloud } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Select } from '../ui/select';
@@ -66,7 +66,7 @@ export function UploadWorkspace({ onResult }: { onResult: (data: any) => void })
           <UploadCloud className="h-10 w-10 text-primary" />
           <div className="text-lg font-semibold text-text">Drop files here or browse</div>
           <p className="text-sm text-muted">HIPAA-ready secure upload · Max 25MB · PDF/JPEG/PNG</p>
-          <label className="mt-2 cursor-pointer rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow">
+          <label className="mt-2 cursor-pointer rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700">
             <input
               type="file"
               accept=".pdf,.png,.jpg,.jpeg"
@@ -121,7 +121,7 @@ export function UploadWorkspace({ onResult }: { onResult: (data: any) => void })
           </div>
           <div className="md:col-span-2 flex justify-end">
             <Button type="submit" disabled={upload.isPending} className="flex items-center gap-2 px-6">
-              {upload.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Run OCR
+              {upload.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />} Scan Document
             </Button>
           </div>
         </form>

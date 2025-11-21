@@ -24,6 +24,13 @@ export function ResultViewer({ result }: ResultViewerProps) {
     URL.revokeObjectURL(url);
   };
 
+  const formattedLines = result?.text
+    ? result.text
+        .split(/\n+/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+    : [];
+
   return (
     <Card className="hover-lift">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -40,8 +47,26 @@ export function ResultViewer({ result }: ResultViewerProps) {
               <span className="font-medium text-text">{result.filename}</span>
               <span className="flex items-center gap-1"><Timer className="h-4 w-4" /> {result.elapsed}ms</span>
             </div>
-            <div className="rounded-lg border border-border bg-white p-3 font-mono text-sm leading-relaxed max-h-72 overflow-y-auto">
-              {result.text || 'No text extracted.'}
+            <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-white via-blue-50/40 to-indigo-50 p-4 shadow-inner">
+              {formattedLines.length > 0 ? (
+                <div className="grid gap-3 max-h-72 overflow-y-auto pr-1">
+                  {formattedLines.map((line, idx) => (
+                    <div
+                      key={`${idx}-${line.slice(0, 10)}`}
+                      className="flex gap-3 rounded-xl bg-white/80 p-3 shadow-sm ring-1 ring-primary/5"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+                        {idx + 1}
+                      </span>
+                      <p className="whitespace-pre-line text-sm leading-relaxed text-text">{line}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-dashed border-border bg-white/60 p-6 text-center text-sm text-muted">
+                  No text extracted.
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => download('txt')} className="gap-2">
