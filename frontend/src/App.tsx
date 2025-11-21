@@ -6,9 +6,11 @@ import { ResultViewer } from './components/results/ResultViewer';
 import { AuditLogTable } from './components/logs/AuditLogTable';
 import { useState } from 'react';
 import { ToastContainer } from './lib/toast';
+import { useSampleExtract } from './features/ocr/useSampleExtract';
 
 export default function App() {
   const [lastResult, setLastResult] = useState<any>();
+  const sampleExtract = useSampleExtract((data) => setLastResult(data));
 
   return (
     <Layout>
@@ -23,7 +25,12 @@ export default function App() {
       <StatsRow />
       <ModuleGrid />
       <UploadWorkspace onResult={setLastResult} />
-      <ResultViewer result={lastResult} />
+      <ResultViewer
+        result={lastResult}
+        onSampleExtract={sampleExtract.run}
+        isSampleLoading={sampleExtract.isPending}
+        sampleError={sampleExtract.error}
+      />
       <AuditLogTable />
     </Layout>
   );

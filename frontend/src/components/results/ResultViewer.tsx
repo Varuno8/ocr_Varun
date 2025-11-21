@@ -1,4 +1,4 @@
-import { Download, Timer } from 'lucide-react';
+import { AlertCircle, Download, ScanText, Timer } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -10,9 +10,12 @@ interface ResultViewerProps {
     elapsed: number;
     text: string;
   };
+  onSampleExtract?: () => Promise<unknown> | void;
+  isSampleLoading?: boolean;
+  sampleError?: Error | null;
 }
 
-export function ResultViewer({ result }: ResultViewerProps) {
+export function ResultViewer({ result, onSampleExtract, isSampleLoading, sampleError }: ResultViewerProps) {
   const download = (ext: 'txt' | 'md') => {
     if (!result) return;
     const blob = new Blob([result.text], { type: 'text/plain' });
@@ -75,11 +78,33 @@ export function ResultViewer({ result }: ResultViewerProps) {
               <Button variant="outline" onClick={() => download('md')} className="gap-2">
                 <Download className="h-4 w-4" /> Download .md
               </Button>
+              {onSampleExtract && (
+                <Button onClick={() => onSampleExtract()} className="gap-2">
+                  {isSampleLoading ? <Timer className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />}
+                  Extract sample text
+                </Button>
+              )}
             </div>
           </>
         ) : (
-          <div className="rounded-lg border border-dashed border-border bg-white p-6 text-center text-muted">
-            No OCR runs yet. Upload a document to see live results here.
+          <div className="space-y-3">
+            <div className="rounded-lg border border-dashed border-border bg-white p-6 text-center text-muted">
+              No OCR runs yet. Upload a document or trigger a sample extraction to see live results here.
+            </div>
+            {onSampleExtract && (
+              <div className="flex justify-center">
+                <Button onClick={() => onSampleExtract()} disabled={isSampleLoading} className="gap-2">
+                  {isSampleLoading ? <Timer className="h-4 w-4 animate-spin" /> : <ScanText className="h-4 w-4" />} Extract sample
+                  text
+                </Button>
+              </div>
+            )}
+            {sampleError && (
+              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{sampleError.message}</span>
+              </div>
+            )}
           </div>
         )}
       </CardContent>
