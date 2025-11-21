@@ -1,3 +1,4 @@
+import { AlertCircle } from 'lucide-react';
 import { useLogs } from '../../hooks/useDashboardData';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 const statusVariant = (status: string) => (status === 'SUCCESS' ? 'success' : 'error');
 
 export function AuditLogTable() {
-  const { data } = useLogs();
+  const { data, error } = useLogs();
   const logs = data || [];
 
   return (
@@ -15,6 +16,15 @@ export function AuditLogTable() {
         <p className="text-sm text-muted">Every OCR run is captured for compliance and observability.</p>
       </CardHeader>
       <CardContent className="overflow-x-auto">
+        {error && (
+          <div className="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <div>
+              <p className="font-medium">Unable to load audit logs</p>
+              <p className="text-xs text-amber-700">{error.message}</p>
+            </div>
+          </div>
+        )}
         <table className="min-w-full divide-y divide-border text-sm">
           <thead className="bg-gray-50">
             <tr>
