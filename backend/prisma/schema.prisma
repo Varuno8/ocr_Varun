@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AuditStatus {
+  SUCCESS
+  FAILED
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ModuleCode {
+  DOCUMENT_SCANNER
+  MEDICINE_STOCK
+  OPD_IPD_FORM
+  LAB_REPORT
+  GENERAL_UPLOAD
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String
+  role      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Module {
+  id          String      @id @default(uuid())
+  name        String
+  code        ModuleCode  @unique
+  description String
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  documents   Document[]
+  auditLogs   AuditLog[]
+}
+
+model Document {
+  id         String        @id @default(uuid())
+  filename   String
+  moduleId   String?
+  module     Module?       @relation(fields: [moduleId], references: [id])
+  text       String
+  method     String
+  elapsedMs  Int
+  uploadedBy String?
+  title      String?
+  notes      String?
+  createdAt  DateTime      @default(now())
+  auditLogs  AuditLog[]
+  jobs       ProcessingJob[]
+
+  @@index([createdAt])
+  @@index([moduleId])
+}
+
+model AuditLog {
+  id          String       @id @default(uuid())
+  documentId  String
+  document    Document     @relation(fields: [documentId], references: [id])
+  moduleId    String?
+  module      Module?      @relation(fields: [moduleId], references: [id])
+  status      AuditStatus
+  elapsedMs   Int
+  errorMessage String?
+  createdAt   DateTime     @default(now())
+
+  @@index([createdAt])
+  @@index([moduleId])
+  @@index([documentId])
+}
+
+model ProcessingJob {
+  id         String    @id @default(uuid())
+  documentId String
+  document   Document  @relation(fields: [documentId], references: [id])
+  status     JobStatus @default(PENDING)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  metadata   Json?
+
+  @@index([documentId])
+  @@index([status])
+}
