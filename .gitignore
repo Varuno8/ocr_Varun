@@ -6,3 +6,5 @@ backend/.next
 backend/node_modules
 frontend/node_modules
 backend/prisma/migrations
+docuhealth-ai/.next
+ocrvarun-6b2c2d17608a-1.json
