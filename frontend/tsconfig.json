@@ -12,7 +12,12 @@
     "esModuleInterop": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": {
+      "lucide-react": ["../docuhealth-ai/node_modules/lucide-react"],
+      "class-variance-authority": ["../docuhealth-ai/node_modules/class-variance-authority"],
+      "@radix-ui/react-slot": ["../docuhealth-ai/node_modules/@radix-ui/react-slot"]
+    }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
